@@ -1,0 +1,2 @@
+test/*.expect text eol=lf
+deps/* linguist-vendored

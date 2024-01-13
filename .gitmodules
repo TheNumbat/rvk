@@ -1,0 +1,3 @@
+[submodule "deps/rpp"]
+	path = deps/rpp
+	url = https://github.com/TheNumbat/rpp

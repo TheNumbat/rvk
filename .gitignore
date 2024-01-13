@@ -1,0 +1,13 @@
+.cache/
+.vscode/
+build/
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.exe
+*.out
+test/debug.log
+test/*.corrected
