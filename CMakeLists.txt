@@ -9,6 +9,7 @@ if(NOT RVK_HAS_RPP)
     add_subdirectory("deps/rpp")
 endif()
 
+add_subdirectory("deps/imgui")
 add_subdirectory("deps/volk")
 add_subdirectory("rvk/")
 

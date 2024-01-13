@@ -29,7 +29,7 @@ if(NOT TARGET rpp)
     message(FATAL_ERROR "rpp could not be found. rpp must be built before rvk.")
 endif()
 
-target_link_libraries(rvk PRIVATE rpp)
+target_link_libraries(rvk PRIVATE rpp ImGui)
 target_include_directories(rvk PRIVATE "../deps/" ${RPP_INCLUDE_DIRS})
 
 if(MSVC)
