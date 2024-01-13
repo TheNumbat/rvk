@@ -2,18 +2,26 @@ cmake_minimum_required(VERSION 3.17)
 
 project(rvk LANGUAGES CXX)
 
+option(RVK_VENDOR_RPP "Use vendored copy of rpp" OFF)
+option(RVK_TEST "Build tests" OFF)
+
 add_subdirectory("rvk/")
-add_subdirectory("test/")
 add_subdirectory("deps/volk")
-add_subdirectory("deps/rpp/rpp")
 
-enable_testing()
+if(RVK_VENDOR_RPP)
+    add_subdirectory("deps/rpp")
+endif()
 
-file(GLOB TEST_SOURCES test/*.cpp)
+if(RVK_TEST)
+    enable_testing()
+    add_subdirectory("test/")
 
-foreach(test ${TEST_SOURCES})
-    get_filename_component(testname ${test} NAME_WE)
-    add_test(NAME ${testname}
-        COMMAND $<TARGET_FILE:${testname}>
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test")
-endforeach(test ${TEST_SOURCES})
+    file(GLOB TEST_SOURCES test/*.cpp)
+
+    foreach(test ${TEST_SOURCES})
+        get_filename_component(testname ${test} NAME_WE)
+        add_test(NAME ${testname}
+            COMMAND $<TARGET_FILE:${testname}>
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test")
+    endforeach(test ${TEST_SOURCES})
+endif()

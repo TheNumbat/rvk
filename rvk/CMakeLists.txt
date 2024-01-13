@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.17)
 project(rvk LANGUAGES CXX)
 
 set(SOURCES_RVK
+    "fwd.h"
     "rvk.h"
     "rvk.cpp"
 )
@@ -25,6 +26,13 @@ set_target_properties(rvk PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF LINKER_L
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CLANG TRUE)
 endif()
+
+if(NOT TARGET rpp)
+    message(FATAL_ERROR "rpp is not available. It must be built before rvk.")
+endif()
+
+target_link_libraries(rvk PRIVATE rpp)
+target_include_directories(rvk PRIVATE "../deps/" "../deps/rpp")
 
 if(MSVC)
     if(MSVC_VERSION LESS 1937)
