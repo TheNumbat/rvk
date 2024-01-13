@@ -1,6 +1,6 @@
 # rvk
 
-(WIP)
+(WIP; refactoring into new repo)
 
 [rpp](https://github.com/TheNumbat/rpp)-based Vulkan abstraction layer.
 
@@ -9,20 +9,18 @@ Includes the following features:
 
 - RAII wrappers for Vulkan objects
 - GPU heap allocator and buffer sub-allocators
-- [Dear ImGui](https://github.com/ocornut/imgui) integration
-- Validation layer support
+- Multiple frames in flight and resource delete queue
+- Async GPU tasks for coroutines
 - Swapchain management and compositor
-- Multiple frames in flight
-- Separate graphics, compute, and transfer queues
+- Validation layer config and debug messaging
+- Graphics, compute, and transfer queue management
 - Multithreaded command pool management
-- Resource deletion queue
-- Pipeline creation (no cache)
 - Compile-time descriptor set layout specifications
-- Async GPU tasks (for the _rpp_ coroutine scheduler)
+- [Dear ImGui](https://github.com/ocornut/imgui) integration
 
 ## Integration
 
-To use rvk in your project, run the following command (or manually download the source):
+To use rvk in your project, run the following commands (or manually download the source):
 
 ```bash
 git submodule add https://github.com/TheNumbat/rvk
@@ -37,10 +35,10 @@ target_link_libraries($your_target PRIVATE rvk)
 target_include_directories($your_target PRIVATE ${RVK_INCLUDE_DIRS})
 ```
 
-If you're already using rpp, also set the following option:
+If you're already using [rpp](https://github.com/TheNumbat/rpp), also set the following option:
 
 ```cmake
-set(RVK_HAS_RPP)
+set(RVK_HAS_RPP TRUE)
 ```
 
 Alternatively, to start an rvk project from scratch, you can fork [rpp_example_project/rvk](https://github.com/TheNumbat/rpp_example_project/tree/rvk).
