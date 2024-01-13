@@ -16,7 +16,7 @@ set(SOURCES_IMGUI
 
 add_library(ImGui STATIC ${SOURCES_IMGUI})
 
-target_include_directories(ImGui PRIVATE ".." "../rpp")
+target_include_directories(ImGui PRIVATE ${RPP_INCLUDE_DIRS})
 
 if(MSVC)
     target_compile_definitions(ImGui
