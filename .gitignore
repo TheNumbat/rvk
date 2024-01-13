@@ -1,6 +1,7 @@
 .cache/
 .vscode/
 build/
+lbuild/
 *.o
 *.obj
 *.so

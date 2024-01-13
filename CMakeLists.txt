@@ -4,6 +4,7 @@ project(rvk LANGUAGES CXX)
 
 add_subdirectory("rvk/")
 add_subdirectory("test/")
+add_subdirectory("deps/volk")
 add_subdirectory("deps/rpp/rpp")
 
 enable_testing()
