@@ -1,5 +1,6 @@
 
 #include "rvk.h"
+#include "instance.h"
 
 namespace rvk {
 
@@ -8,8 +9,13 @@ using namespace rpp;
 namespace impl {
 
 struct Vk {
+    Rc<Instance, Alloc> instance;
+    Rc<Debug_Callback, Alloc> debug_callback;
+
     Vk(Config config) {
-        static_cast<void>(config);
+        instance = Rc<Instance, Alloc>{move(config.instance_extensions), move(config.layers),
+                                       config.validation};
+        debug_callback = Rc<Debug_Callback, Alloc>{instance.dup()};
     }
 };
 

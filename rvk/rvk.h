@@ -10,9 +10,11 @@ namespace rvk {
 using namespace rpp;
 
 struct Config {
-    u32 frames_in_flight = 2;
-    bool use_validation = true;
+    Slice<String_View> layers;
     Slice<String_View> instance_extensions;
+    bool validation = true;
+
+    u32 frames_in_flight = 2;
 };
 
 [[nodiscard]] bool startup(Config config) noexcept;

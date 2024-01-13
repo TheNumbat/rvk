@@ -21,6 +21,7 @@ using namespace rpp;
 using Alloc = Mallocator<"rvk">;
 
 struct Instance;
+struct Debug_Callback;
 
 [[nodiscard]] String_View describe(VkResult result) noexcept;
 [[nodiscard]] String_View describe(VkObjectType object) noexcept;
