@@ -81,7 +81,7 @@ private:
 
 struct Device {
 
-    explicit Device(Rc<Physical_Device, Alloc> physical_device, Slice<String_View> extensions,
+    explicit Device(Arc<Physical_Device, Alloc> physical_device, Slice<String_View> extensions,
                     VkPhysicalDeviceFeatures2& features, VkSurfaceKHR surface);
     ~Device();
 
@@ -108,7 +108,7 @@ struct Device {
     }
 
 private:
-    Rc<Physical_Device, Alloc> physical_device;
+    Arc<Physical_Device, Alloc> physical_device;
     Vec<String<Alloc>, Alloc> enabled_extensions;
 
     VkDevice device = null;
@@ -131,3 +131,5 @@ private:
 
 RPP_NAMED_ENUM(rvk::Queue_Family, "Queue_Family", graphics, RPP_CASE(graphics), RPP_CASE(present),
                RPP_CASE(compute), RPP_CASE(transfer));
+
+RPP_NAMED_ENUM(rvk::Heap, "Heap", device, RPP_CASE(device), RPP_CASE(host));

@@ -183,7 +183,7 @@ void Physical_Device::imgui() {
     }
 }
 
-Device::Device(Rc<Physical_Device, Alloc> P, Slice<String_View> extensions,
+Device::Device(Arc<Physical_Device, Alloc> P, Slice<String_View> extensions,
                VkPhysicalDeviceFeatures2& features, VkSurfaceKHR surface)
     : physical_device(move(P)) {
 

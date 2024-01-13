@@ -12,34 +12,32 @@ using namespace rpp;
 namespace impl {
 
 struct Vk {
-    Rc<Instance, Alloc> instance;
-    Rc<Debug_Callback, Alloc> debug_callback;
-    Rc<Physical_Device, Alloc> physical_device;
-    Rc<Device, Alloc> device;
+    Arc<Instance, Alloc> instance;
+    Arc<Debug_Callback, Alloc> debug_callback;
+    Arc<Physical_Device, Alloc> physical_device;
+    Arc<Device, Alloc> device;
 
     VkSurfaceKHR surface;
 
     explicit Vk(Config config) {
 
-        instance = Rc<Instance, Alloc>{move(config.instance_extensions), move(config.layers),
-                                       config.validation};
+        instance = Arc<Instance, Alloc>{move(config.instance_extensions), move(config.layers),
+                                        config.validation};
 
-        debug_callback = Rc<Debug_Callback, Alloc>{instance.dup()};
+        debug_callback = Arc<Debug_Callback, Alloc>{instance.dup()};
 
         surface = config.create_surface(*instance);
 
         physical_device = instance->physical_device(config.device_extensions, surface);
 
-        device = Rc<Device, Alloc>{physical_device.dup(), config.device_extensions,
-                                   config.device_features, surface};
+        device = Arc<Device, Alloc>{physical_device.dup(), config.device_extensions,
+                                    config.device_features, surface};
     }
 
     ~Vk() {
         vkDestroySurfaceKHR(*instance, surface, null);
     }
 };
-
-static Opt<Vk> singleton;
 
 void check(VkResult result) {
     RVK_CHECK(result);
@@ -131,6 +129,8 @@ static void* imgui_alloc(u64 sz, void*) {
 static void imgui_free(void* mem, void*) {
     ImGui_Alloc::free(mem);
 }
+
+static Opt<Vk> singleton;
 
 } // namespace impl
 

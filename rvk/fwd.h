@@ -27,6 +27,7 @@ struct Instance;
 struct Debug_Callback;
 struct Physical_Device;
 struct Device;
+struct Swapchain;
 
 String_View describe(VkResult result);
 String_View describe(VkObjectType object);

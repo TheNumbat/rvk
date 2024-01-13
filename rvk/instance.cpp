@@ -200,8 +200,8 @@ void Instance::imgui() {
     }
 }
 
-Rc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensions,
-                                                     VkSurfaceKHR surface) {
+Arc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensions,
+                                                      VkSurfaceKHR surface) {
     Region(R) {
 
         u32 n_devices = 0;
@@ -215,12 +215,12 @@ Rc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensio
         auto vk_physical_devices = Vec<VkPhysicalDevice, Mregion<R>>::make(n_devices);
         RVK_CHECK(vkEnumeratePhysicalDevices(instance, &n_devices, vk_physical_devices.data()));
 
-        Vec<Rc<Physical_Device, Alloc>, Mregion<R>> physical_devices;
+        Vec<Arc<Physical_Device, Alloc>, Mregion<R>> physical_devices;
         for(u32 i = 0; i < n_devices; i++) {
-            physical_devices.push(Rc<Physical_Device, Alloc>{vk_physical_devices[i]});
+            physical_devices.push(Arc<Physical_Device, Alloc>{vk_physical_devices[i]});
         }
 
-        Vec<Rc<Physical_Device, Alloc>, Mregion<R>> compatible_devices;
+        Vec<Arc<Physical_Device, Alloc>, Mregion<R>> compatible_devices;
 
         for(auto& device : physical_devices) {
             info("[rvk] Checking device: %", device->name());
@@ -293,7 +293,7 @@ Rc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensio
     }
 }
 
-Debug_Callback::Debug_Callback(Rc<Instance, Alloc> I) : instance(move(I)) {
+Debug_Callback::Debug_Callback(Arc<Instance, Alloc> I) : instance(move(I)) {
 
     Profile::Time_Point start = Profile::timestamp();
 

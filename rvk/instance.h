@@ -12,7 +12,7 @@ using namespace rpp;
 
 struct Debug_Callback {
 
-    explicit Debug_Callback(Rc<Instance, Alloc> instance);
+    explicit Debug_Callback(Arc<Instance, Alloc> instance);
     ~Debug_Callback();
 
     Debug_Callback(const Debug_Callback&) = delete;
@@ -21,7 +21,7 @@ struct Debug_Callback {
     Debug_Callback& operator=(Debug_Callback&&) = delete;
 
 private:
-    Rc<Instance, Alloc> instance;
+    Arc<Instance, Alloc> instance;
     VkDebugUtilsMessengerEXT messenger = null;
 };
 
@@ -37,7 +37,8 @@ struct Instance {
 
     void imgui();
 
-    Rc<Physical_Device, Alloc> physical_device(Slice<String_View> extensions, VkSurfaceKHR surface);
+    Arc<Physical_Device, Alloc> physical_device(Slice<String_View> extensions,
+                                                VkSurfaceKHR surface);
 
     operator VkInstance() const {
         return instance;
