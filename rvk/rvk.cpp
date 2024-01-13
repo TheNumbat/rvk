@@ -14,11 +14,12 @@ namespace impl {
 struct Vk {
     Rc<Instance, Alloc> instance;
     Rc<Debug_Callback, Alloc> debug_callback;
+    Rc<Physical_Device, Alloc> physical_device;
+    Rc<Device, Alloc> device;
 
     VkSurfaceKHR surface;
-    Rc<Physical_Device, Alloc> physical_device;
 
-    Vk(Config config) {
+    explicit Vk(Config config) {
 
         instance = Rc<Instance, Alloc>{move(config.instance_extensions), move(config.layers),
                                        config.validation};
@@ -28,6 +29,9 @@ struct Vk {
         surface = config.create_surface(*instance);
 
         physical_device = instance->physical_device(config.device_extensions, surface);
+
+        device = Rc<Device, Alloc>{physical_device.dup(), config.device_extensions,
+                                   config.device_features, surface};
     }
 
     ~Vk() {

@@ -18,11 +18,15 @@ namespace rvk {
 using namespace rpp;
 using Alloc = Mallocator<"rvk">;
 
+enum class Queue_Family : u8;
+enum class Heap : u8;
+
 namespace impl {
 
 struct Instance;
 struct Debug_Callback;
 struct Physical_Device;
+struct Device;
 
 String_View describe(VkResult result);
 String_View describe(VkObjectType object);

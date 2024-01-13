@@ -2,6 +2,7 @@
 #pragma once
 
 #include <rpp/base.h>
+#include <rpp/rc.h>
 
 #include "fwd.h"
 
@@ -10,6 +11,7 @@ namespace rvk {
 using namespace rpp;
 
 enum class Queue_Family : u8 { graphics, present, compute, transfer };
+enum class Heap : u8 { device, host };
 
 namespace impl {
 
@@ -75,6 +77,53 @@ private:
     Properties properties_;
     Vec<VkExtensionProperties, Alloc> available_extensions;
     Vec<VkQueueFamilyProperties2, Alloc> available_families;
+};
+
+struct Device {
+
+    explicit Device(Rc<Physical_Device, Alloc> physical_device, Slice<String_View> extensions,
+                    VkPhysicalDeviceFeatures2& features, VkSurfaceKHR surface);
+    ~Device();
+
+    Device(const Device&) = delete;
+    Device& operator=(const Device&) = delete;
+    Device(Device&&) = delete;
+    Device& operator=(Device&&) = delete;
+
+    void imgui();
+
+    u32 heap_index(Heap heap);
+    u64 heap_size(Heap heap);
+
+    u64 non_coherent_atom_size();
+    u64 sbt_handle_size();
+    u64 sbt_handle_alignment();
+
+    u32 queue_index(Queue_Family family);
+    u64 queue_count(Queue_Family family);
+    VkQueue queue(Queue_Family family, u32 index = 0);
+
+    operator VkDevice() const {
+        return device;
+    }
+
+private:
+    Rc<Physical_Device, Alloc> physical_device;
+    Vec<String<Alloc>, Alloc> enabled_extensions;
+
+    VkDevice device = null;
+
+    u32 device_memory_index = 0;
+    u32 host_memory_index = 0;
+    u32 graphics_family_index = 0;
+    u32 present_family_index = 0;
+    u32 compute_family_index = 0;
+    u32 transfer_family_index = 0;
+
+    VkQueue present_q = null;
+    Vec<VkQueue, Alloc> graphics_qs;
+    Vec<VkQueue, Alloc> compute_qs;
+    Vec<VkQueue, Alloc> transfer_qs;
 };
 
 } // namespace impl

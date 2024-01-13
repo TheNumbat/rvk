@@ -53,6 +53,8 @@ static VkBool32 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT sev,
                  obj->pObjectName ? String_View{obj->pObjectName} : "?"_v, obj->objectHandle);
     }
 
+    if(is_error) RPP_DEBUG_BREAK;
+
     return is_error;
 }
 

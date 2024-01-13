@@ -183,4 +183,261 @@ void Physical_Device::imgui() {
     }
 }
 
+Device::Device(Rc<Physical_Device, Alloc> P, Slice<String_View> extensions,
+               VkPhysicalDeviceFeatures2& features, VkSurfaceKHR surface)
+    : physical_device(move(P)) {
+
+    Profile::Time_Point start = Profile::timestamp();
+
+    info("[vrk] Creating device...");
+    Log_Indent {
+
+        if(auto idx = physical_device->queue_index(Queue_Family::graphics)) {
+            graphics_family_index = *idx;
+        } else {
+            die("[rvk] No graphics queue family found.");
+        }
+
+        if(auto idx = physical_device->present_queue_index(surface)) {
+            present_family_index = *idx;
+        } else {
+            die("[rvk] No present queue family found.");
+        }
+
+        compute_family_index =
+            physical_device->queue_index(Queue_Family::compute).value_or(graphics_family_index);
+        transfer_family_index =
+            physical_device->queue_index(Queue_Family::transfer).value_or(graphics_family_index);
+
+        u32 n_graphics_queues = physical_device->queue_count(Queue_Family::graphics);
+        u32 n_compute_queues = physical_device->queue_count(Queue_Family::compute);
+        u32 n_transfer_queues = physical_device->queue_count(Queue_Family::transfer);
+
+        u32 max_queues =
+            Math::max(n_graphics_queues, Math::max(n_compute_queues, n_transfer_queues));
+        if(max_queues == 0) {
+            die("[rvk] No queues found.");
+        }
+
+        Region(R) {
+            auto priorities = Vec<f32, Mregion<R>>::make(max_queues);
+            priorities[0] = 1.0f;
+
+            for(u64 i = 1; i < priorities.length(); i++) {
+                priorities[i] = priorities[i - 1] * 0.9f;
+            }
+
+            Vec<VkDeviceQueueCreateInfo, Mregion<R>> queue_infos;
+            {
+                VkDeviceQueueCreateInfo qinfo = {};
+                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                qinfo.queueFamilyIndex = graphics_family_index;
+                qinfo.queueCount = n_graphics_queues;
+                qinfo.pQueuePriorities = priorities.data();
+                queue_infos.push(qinfo);
+            }
+
+            for(f32& p : priorities) {
+                p *= 0.9f;
+            }
+
+            if(compute_family_index != graphics_family_index) {
+                VkDeviceQueueCreateInfo qinfo = {};
+                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                qinfo.queueFamilyIndex = compute_family_index;
+                qinfo.queueCount = n_compute_queues;
+                qinfo.pQueuePriorities = priorities.data();
+                queue_infos.push(qinfo);
+            } else {
+                info("[rvk] Using graphics queue family as compute queue family.");
+            }
+            if(transfer_family_index != graphics_family_index) {
+                VkDeviceQueueCreateInfo qinfo = {};
+                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                qinfo.queueFamilyIndex = transfer_family_index;
+                qinfo.queueCount = n_transfer_queues;
+                qinfo.pQueuePriorities = priorities.data();
+                queue_infos.push(qinfo);
+            } else {
+                info("[rvk] Using graphics queue family as transfer queue family.");
+            }
+            if(present_family_index != graphics_family_index) {
+                VkDeviceQueueCreateInfo qinfo = {};
+                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                qinfo.queueFamilyIndex = present_family_index;
+                qinfo.queueCount = 1;
+                qinfo.pQueuePriorities = priorities.data();
+                queue_infos.push(qinfo);
+            } else {
+                info("[rvk] Using graphics queue family as present queue family.");
+            }
+
+            Vec<const char*, Mregion<R>> vk_extensions;
+            for(auto& ext : extensions) {
+                vk_extensions.push(
+                    reinterpret_cast<const char*>(ext.terminate<Mregion<R>>().data()));
+            }
+
+            VkDeviceCreateInfo dev_info = {};
+            dev_info.pNext = &features;
+            features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+            dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+            dev_info.queueCreateInfoCount = static_cast<u32>(queue_infos.length());
+            dev_info.pQueueCreateInfos = queue_infos.data();
+            dev_info.enabledExtensionCount = static_cast<u32>(vk_extensions.length());
+            dev_info.ppEnabledExtensionNames = vk_extensions.data();
+
+            RVK_CHECK(vkCreateDevice(*physical_device, &dev_info, null, &device));
+
+            graphics_qs.resize(n_graphics_queues);
+            compute_qs.resize(n_compute_queues);
+            transfer_qs.resize(n_transfer_queues);
+
+            VkDeviceQueueInfo2 info = {};
+            info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+
+            info.queueFamilyIndex = graphics_family_index;
+            for(u32 i = 0; i < n_graphics_queues; i++) {
+                info.queueIndex = i;
+                vkGetDeviceQueue2(device, &info, &graphics_qs[i]);
+            }
+
+            info.queueFamilyIndex = compute_family_index;
+            for(u32 i = 0; i < n_compute_queues; i++) {
+                info.queueIndex = i;
+                vkGetDeviceQueue2(device, &info, &compute_qs[i]);
+            }
+
+            info.queueFamilyIndex = transfer_family_index;
+            for(u32 i = 0; i < n_transfer_queues; i++) {
+                info.queueIndex = i;
+                vkGetDeviceQueue2(device, &info, &transfer_qs[i]);
+            }
+
+            info.queueFamilyIndex = present_family_index;
+            info.queueIndex = 0;
+            vkGetDeviceQueue2(device, &info, &present_q);
+        }
+
+        info("[rvk] Got % graphics queues from family %.", n_graphics_queues,
+             graphics_family_index);
+        info("[rvk] Got % compute queues from family %.", n_compute_queues, compute_family_index);
+        info("[rvk] Got % transfer queues from family %.", n_transfer_queues,
+             transfer_family_index);
+        info("[rvk] Got present queue from family %.", present_family_index);
+
+        if(auto idx =
+               physical_device->heap_index(RPP_UINT32_MAX, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+            device_memory_index = *idx;
+        } else {
+            die("[rvk] No device local heap found.");
+        }
+
+        if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
+                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+            host_memory_index = *idx;
+        } else {
+            die("[rvk] No host visible heap found.");
+        }
+
+        info("[rvk] Found device and host heaps (%mb, %mb).", heap_size(Heap::device) / Math::MB(1),
+             heap_size(Heap::host) / Math::MB(1));
+
+        volkLoadDevice(device);
+        info("[rvk] Loaded device functions.");
+
+        Profile::Time_Point end = Profile::timestamp();
+        info("[rvk] Finished creating device in %ms.", Profile::ms(end - start));
+    }
+}
+
+Device::~Device() {
+    if(device) {
+        vkDeviceWaitIdle(device);
+        vkDestroyDevice(device, null);
+        info("[rvk] Destroyed device.");
+    }
+    device = null;
+}
+
+u32 Device::heap_index(Heap heap) {
+    switch(heap) {
+    case Heap::device: return device_memory_index;
+    case Heap::host: return host_memory_index;
+    default: RPP_UNREACHABLE;
+    }
+}
+
+u64 Device::heap_size(Heap heap) {
+    switch(heap) {
+    case Heap::device: return physical_device->heap_size(device_memory_index);
+    case Heap::host: return physical_device->heap_size(host_memory_index);
+    default: RPP_UNREACHABLE;
+    }
+}
+
+u64 Device::non_coherent_atom_size() {
+    return physical_device->properties().device.properties.limits.nonCoherentAtomSize;
+}
+
+u64 Device::sbt_handle_size() {
+    return physical_device->properties().ray_tracing.shaderGroupHandleSize;
+}
+
+u64 Device::sbt_handle_alignment() {
+    return physical_device->properties().ray_tracing.shaderGroupBaseAlignment;
+}
+
+u64 Device::queue_count(Queue_Family family) {
+    switch(family) {
+    case Queue_Family::transfer: return transfer_qs.length();
+    case Queue_Family::graphics: return graphics_qs.length();
+    case Queue_Family::compute: return compute_qs.length();
+    case Queue_Family::present: return 1;
+    default: RPP_UNREACHABLE;
+    }
+}
+
+VkQueue Device::queue(Queue_Family family, u32 index) {
+    switch(family) {
+    case Queue_Family::transfer: return transfer_qs[index];
+    case Queue_Family::graphics: return graphics_qs[index];
+    case Queue_Family::compute: return compute_qs[index];
+    case Queue_Family::present: return present_q;
+    default: RPP_UNREACHABLE;
+    }
+}
+
+u32 Device::queue_index(Queue_Family family) {
+    switch(family) {
+    case Queue_Family::transfer: return transfer_family_index;
+    case Queue_Family::graphics: return graphics_family_index;
+    case Queue_Family::compute: return compute_family_index;
+    case Queue_Family::present: return present_family_index;
+    default: RPP_UNREACHABLE;
+    }
+}
+
+void Device::imgui() {
+    using namespace ImGui;
+
+    Text("Device heap: %d (%d mb)", device_memory_index, heap_size(Heap::device) / Math::MB(1));
+    Text("Host heap: %d (%d mb)", host_memory_index, heap_size(Heap::host) / Math::MB(1));
+    Text("Graphics family: %d", graphics_family_index);
+    Text("Compute family: %d", compute_family_index);
+    Text("Transfer family: %d", transfer_family_index);
+    Text("Present family: %d", present_family_index);
+
+    Text("Non coherent atom size: %lu", non_coherent_atom_size());
+    Text("SBT handle size: %lu", sbt_handle_size());
+    Text("SBT handle alignment: %lu", sbt_handle_alignment());
+
+    if(TreeNode("Enabled Extensions")) {
+        for(auto& ext : enabled_extensions)
+            Text("%.*s", ext.length(), reinterpret_cast<const char*>(ext.data()));
+        TreePop();
+    }
+}
+
 } // namespace rvk::impl

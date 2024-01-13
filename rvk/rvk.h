@@ -15,6 +15,7 @@ struct Config {
     Slice<String_View> instance_extensions;
 
     Slice<String_View> device_extensions;
+    VkPhysicalDeviceFeatures2 device_features = {};
     Function<VkSurfaceKHR(VkInstance)> create_surface;
 };
 
