@@ -1,6 +1,7 @@
 
 #include <imgui/imgui.h>
 
+#include "device.h"
 #include "instance.h"
 
 namespace rvk::impl {
@@ -24,32 +25,32 @@ static VkBool32 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT sev,
                     (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT);
 
     if(is_error) {
-        warn("[VK] % (%)", message, data->messageIdNumber);
+        warn("[rvk] % (%)", message, data->messageIdNumber);
     } else {
-        info("[VK] % (%)", message, data->messageIdNumber);
+        info("[rvk] % (%)", message, data->messageIdNumber);
     }
 
     for(u32 i = 0; i < data->queueLabelCount; i++) {
         if(is_error)
-            warn("\tduring %", data->pQueueLabels[i].pLabelName);
+            warn("\tduring %", String_View{data->pQueueLabels[i].pLabelName});
         else
-            info("\tduring %", data->pQueueLabels[i].pLabelName);
+            info("\tduring %", String_View{data->pQueueLabels[i].pLabelName});
     }
     for(u32 i = 0; i < data->cmdBufLabelCount; i++) {
         if(is_error)
-            warn("\tinside %", data->pCmdBufLabels[i].pLabelName);
+            warn("\tinside %", String_View{data->pCmdBufLabels[i].pLabelName});
         else
-            info("\tinside %", data->pCmdBufLabels[i].pLabelName);
+            info("\tinside %", String_View{data->pCmdBufLabels[i].pLabelName});
     }
 
     for(u32 i = 0; i < data->objectCount; i++) {
         const VkDebugUtilsObjectNameInfoEXT* obj = &data->pObjects[i];
         if(is_error)
             warn("\tusing %: % (%)", describe(obj->objectType),
-                 obj->pObjectName ? obj->pObjectName : "?", obj->objectHandle);
+                 obj->pObjectName ? String_View{obj->pObjectName} : "?"_v, obj->objectHandle);
         else
             info("\tusing %: % (%)", describe(obj->objectType),
-                 obj->pObjectName ? obj->pObjectName : "?", obj->objectHandle);
+                 obj->pObjectName ? String_View{obj->pObjectName} : "?"_v, obj->objectHandle);
     }
 
     return is_error;
@@ -59,8 +60,8 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers, boo
 
     Profile::Time_Point start = Profile::timestamp();
 
-    Region(R) {
-        info("[rvk] creating instance...");
+    info("[rvk] Creating instance...");
+    Log_Indent Region(R) {
 
         RVK_CHECK(volkInitialize());
 
@@ -102,21 +103,21 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers, boo
         VkResult result = vkCreateInstance(&create_info, null, &instance);
 
         if(result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-            die("[rvk] error creating instance: incompatible driver.");
+            die("[rvk] Error creating instance: incompatible driver!");
         } else if(result == VK_ERROR_LAYER_NOT_PRESENT) {
-            warn("[rvk] error creating instance: could not find layer, retrying without "
+            warn("[rvk] Error creating instance: could not find layer, retrying without "
                  "validation...");
 
             create_info.enabledLayerCount -= 2;
             result = vkCreateInstance(&create_info, null, &instance);
 
             if(result != VK_SUCCESS) {
-                die("[rvk] error creating instance: %", describe(result));
+                die("[rvk] Error creating instance: %!", describe(result));
             } else {
-                warn("[rvk] created instance without validation.");
+                warn("[rvk] Created instance without validation.");
             }
         } else if(result != VK_SUCCESS) {
-            die("[rvk] error creating instance: %", describe(result));
+            die("[rvk] Error creating instance: %!", describe(result));
         }
 
         for(auto& ext : extensions) {
@@ -125,22 +126,24 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers, boo
         for(auto& layer : layer_names) {
             enabled_layers.push(String_View{layer}.string<Alloc>());
         }
-    }
 
-    Profile::Time_Point end = Profile::timestamp();
-    info("[rvk] created instance in %ms.", Profile::ms(end - start));
-    Log_Indent {
-        for(auto& layer : enabled_layers) info("[rvk] enabled layer: %", layer);
-    }
+        volkLoadInstance(instance);
+        info("[rvk] Loaded instance functions.");
+        for(auto& layer : enabled_layers) info("[rvk] Enabled layer %.", layer);
 
-    volkLoadInstance(instance);
-    info("[rvk] loaded instance functions.");
+        if(!vkGetPhysicalDeviceSurfaceFormatsKHR) {
+            die("[rvk] did not load a platform-specific surface extension!");
+        }
+
+        Profile::Time_Point end = Profile::timestamp();
+        info("[rvk] Created instance in %ms.", Profile::ms(end - start));
+    }
 }
 
 Instance::~Instance() {
     if(instance) {
         vkDestroyInstance(instance, null);
-        info("[rvk] destroyed instance.");
+        info("[rvk] Destroyed instance.");
     }
     instance = null;
 }
@@ -155,23 +158,23 @@ void Instance::check_extensions(Slice<const char*> extensions) {
                                                          available_extensions.data()));
     }
 
-    info("[rvk] checking required instance extensions...");
-    for(auto required : extensions) Log_Indent {
-            String_View required_name{required};
+    info("[rvk] Checking extensions...");
+    Log_Indent for(auto required : extensions) {
+        String_View required_name{required};
 
-            bool found = false;
-            for(auto extension : available_extensions) {
-                String_View extension_name{extension.extensionName};
-                if(required_name == extension_name) {
-                    found = true;
-                    break;
-                }
+        bool found = false;
+        for(auto extension : available_extensions) {
+            String_View extension_name{extension.extensionName};
+            if(required_name == extension_name) {
+                found = true;
+                break;
             }
-            if(found)
-                info("[rvk] found %", required_name);
-            else
-                die("[rvk] missing %", required_name);
         }
+        if(found)
+            info("[rvk] Found %.", required_name);
+        else
+            die("[rvk] Did not find %.", required_name);
+    }
 }
 
 void Instance::imgui() {
@@ -181,17 +184,110 @@ void Instance::imgui() {
     RVK_CHECK(vkEnumerateInstanceVersion(&vk_version));
 
     Text("Instance Version: %u", vk_version);
-    if(TreeNode("Instance Extensions")) {
+    if(TreeNode("Extensions")) {
         for(auto& ext : available_extensions) Text("%s", ext.extensionName);
         TreePop();
     }
-    if(TreeNode("Enabled Instance Extensions")) {
+    if(TreeNode("Enabled Extensions")) {
         for(auto& ext : enabled_extensions) Text("%*.s", ext.length(), ext.data());
         TreePop();
     }
     if(TreeNode("Enabled Layers")) {
         for(auto& layer : enabled_layers) Text("%*.s", layer.length(), layer.data());
         TreePop();
+    }
+}
+
+Rc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensions,
+                                                     VkSurfaceKHR surface) {
+    Region(R) {
+
+        u32 n_devices = 0;
+        RVK_CHECK(vkEnumeratePhysicalDevices(instance, &n_devices, null));
+        if(n_devices == 0) {
+            die("[rvk] Found no GPUs!");
+        } else {
+            info("[rvk] Found % GPU(s)...", n_devices);
+        }
+
+        auto vk_physical_devices = Vec<VkPhysicalDevice, Mregion<R>>::make(n_devices);
+        RVK_CHECK(vkEnumeratePhysicalDevices(instance, &n_devices, vk_physical_devices.data()));
+
+        Vec<Rc<Physical_Device, Alloc>, Mregion<R>> physical_devices;
+        for(u32 i = 0; i < n_devices; i++) {
+            physical_devices.push(Rc<Physical_Device, Alloc>{vk_physical_devices[i]});
+        }
+
+        Vec<Rc<Physical_Device, Alloc>, Mregion<R>> compatible_devices;
+
+        for(auto& device : physical_devices) {
+            info("[rvk] Checking device: %", device->name());
+            Log_Indent {
+                auto surface_formats = device->template surface_formats<R>(surface);
+                if(surface_formats.empty()) {
+                    info("[rvk] Device has no compatible surface formats!");
+                    continue;
+                }
+
+                auto present_modes = device->template present_modes<R>(surface);
+                if(present_modes.empty()) {
+                    info("[rvk] Device has no compatible present modes!");
+                    continue;
+                }
+
+                auto graphics_queue = device->queue_index(Queue_Family::graphics);
+                if(!graphics_queue) {
+                    info("[rvk] Device has no graphics queue family!");
+                    continue;
+                }
+
+                auto present_queue = device->present_queue_index(surface);
+                if(!present_queue) {
+                    info("[rvk] Device has no compatible present queue family!");
+                    continue;
+                }
+
+                bool supported = true;
+                for(auto& extension : extensions) {
+                    if(device->supports_extension(extension)) {
+                        info("[rvk] Found required device extension: %", String_View{extension});
+                    } else {
+                        info("[rvk] Device does not support required extension %", extension);
+                        supported = false;
+                        break;
+                    }
+                }
+                if(!supported) continue;
+
+                info("[rvk] Device is supported.");
+                compatible_devices.push(move(device));
+            }
+        }
+
+        if(compatible_devices.empty()) {
+            die("[rvk] Found no compatible devices!");
+        } else {
+            info("[rvk] Found % compatible device(s).", compatible_devices.length());
+        }
+
+        Opt<u32> discrete_idx;
+        for(u32 i = 0; i < compatible_devices.length(); i++) {
+            if(compatible_devices[i]->is_discrete()) {
+                discrete_idx = Opt<u32>{i};
+                break;
+            }
+        }
+
+        if(!discrete_idx) {
+            info("[rvk] No discrete GPU found, selecting first compatible device.");
+        } else {
+            info("[rvk] Found discrete GPU: %.", compatible_devices[*discrete_idx]->name());
+        }
+
+        u32 idx = discrete_idx ? *discrete_idx : 0;
+        info("Selected device: %.", compatible_devices[idx]->name());
+
+        return move(compatible_devices.front());
     }
 }
 
@@ -213,13 +309,13 @@ Debug_Callback::Debug_Callback(Rc<Instance, Alloc> I) : instance(move(I)) {
     RVK_CHECK(vkCreateDebugUtilsMessengerEXT(*instance, &callback, null, &messenger));
 
     Profile::Time_Point end = Profile::timestamp();
-    info("[rvk] created debug utils messenger in %ms.", Profile::ms(end - start));
+    info("[rvk] created debug utils messenger in %ms", Profile::ms(end - start));
 }
 
 Debug_Callback::~Debug_Callback() {
     if(messenger) {
         vkDestroyDebugUtilsMessengerEXT(*instance, messenger, null);
-        info("[rvk] destroyed debug utils messenger.");
+        info("[rvk] destroyed debug utils messenger");
     }
     instance = {};
     messenger = null;

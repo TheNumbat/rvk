@@ -8,6 +8,8 @@ set(SOURCES_RVK
     "rvk.cpp"
     "instance.cpp"
     "instance.h"
+    "device.cpp"
+    "device.h"
 )
 
 if(UNIX AND NOT APPLE)

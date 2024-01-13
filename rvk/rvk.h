@@ -14,10 +14,11 @@ struct Config {
     Slice<String_View> instance_extensions;
     bool validation = true;
 
-    u32 frames_in_flight = 2;
+    Slice<String_View> device_extensions;
+    VkSurfaceKHR surface = null;
 };
 
-[[nodiscard]] bool startup(Config config) noexcept;
-void shutdown() noexcept;
+bool startup(Config config);
+void shutdown();
 
 } // namespace rvk

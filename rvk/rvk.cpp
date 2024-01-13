@@ -1,5 +1,6 @@
 
 #include "rvk.h"
+#include "device.h"
 #include "instance.h"
 
 namespace rvk {
@@ -11,21 +12,23 @@ namespace impl {
 struct Vk {
     Rc<Instance, Alloc> instance;
     Rc<Debug_Callback, Alloc> debug_callback;
+    Rc<Physical_Device, Alloc> physical_device;
 
     Vk(Config config) {
         instance = Rc<Instance, Alloc>{move(config.instance_extensions), move(config.layers),
                                        config.validation};
         debug_callback = Rc<Debug_Callback, Alloc>{instance.dup()};
+        physical_device = instance->physical_device(config.device_extensions, config.surface);
     }
 };
 
 static Opt<Vk> singleton;
 
-void check(VkResult result) noexcept {
+void check(VkResult result) {
     RVK_CHECK(result);
 }
 
-[[nodiscard]] String_View describe(VkResult result) noexcept {
+String_View describe(VkResult result) {
     switch(result) {
 #define STR(r)                                                                                     \
     case VK_##r: return #r##_v
@@ -58,7 +61,7 @@ void check(VkResult result) noexcept {
     }
 }
 
-[[nodiscard]] String_View describe(VkObjectType type) noexcept {
+[[nodiscard]] String_View describe(VkObjectType type) {
     switch(type) {
 #define STR(r)                                                                                     \
     case VK_OBJECT_TYPE_##r: return #r##_v
@@ -104,20 +107,20 @@ void check(VkResult result) noexcept {
 
 } // namespace impl
 
-// API
-
-[[nodiscard]] bool startup(Config config) noexcept {
+bool startup(Config config) {
     if(impl::singleton) {
         die("[rvk] already started up!");
     }
+    Profile::Time_Point start = Profile::timestamp();
     impl::singleton = impl::Vk{config};
-    info("[rvk] completed startup.");
+    Profile::Time_Point end = Profile::timestamp();
+    info("[rvk] completed startup in %ms", Profile::ms(end - start));
     return true;
 }
 
-void shutdown() noexcept {
+void shutdown() {
     impl::singleton = {};
-    info("[rvk] completed shutdown.");
+    info("[rvk] completed shutdown");
 }
 
 } // namespace rvk

@@ -37,17 +37,16 @@ struct Instance {
 
     void imgui();
 
-    [[nodiscard]] operator VkInstance() const {
+    Rc<Physical_Device, Alloc> physical_device(Slice<String_View> extensions, VkSurfaceKHR surface);
+
+    operator VkInstance() const {
         return instance;
     }
 
 private:
     void check_extensions(Slice<const char*> extensions);
-    void create_debug_callback();
-    void destroy_debug_callback();
 
     VkInstance instance = null;
-
     Vec<String<Alloc>, Alloc> enabled_layers;
     Vec<String<Alloc>, Alloc> enabled_extensions;
     Vec<VkExtensionProperties, Alloc> available_extensions;

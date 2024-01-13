@@ -22,10 +22,11 @@ using Alloc = Mallocator<"rvk">;
 
 struct Instance;
 struct Debug_Callback;
+struct Physical_Device;
 
-[[nodiscard]] String_View describe(VkResult result) noexcept;
-[[nodiscard]] String_View describe(VkObjectType object) noexcept;
-void check(VkResult result) noexcept;
+String_View describe(VkResult result);
+String_View describe(VkObjectType object);
+void check(VkResult result);
 
 } // namespace impl
 } // namespace rvk
