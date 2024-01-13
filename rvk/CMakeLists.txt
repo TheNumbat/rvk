@@ -10,6 +10,10 @@ set(SOURCES_RVK
     "instance.h"
     "device.cpp"
     "device.h"
+    "swapchain.h"
+    "swapchain.cpp"
+    "memory.cpp"
+    "memory.h"
 )
 
 if(UNIX AND NOT APPLE)

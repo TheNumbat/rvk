@@ -278,6 +278,16 @@ Device::Device(Arc<Physical_Device, Alloc> P, Slice<String_View> extensions,
                     reinterpret_cast<const char*>(ext.terminate<Mregion<R>>().data()));
             }
 
+            vk_extensions.push(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME);
+            vk_extensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+            vk_extensions.push(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
+            vk_extensions.push(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
+#ifdef RPP_OS_WINDOWS
+            vk_extensions.push(VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME);
+#else
+            vk_extensions.push(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME);
+#endif
+
             VkDeviceCreateInfo dev_info = {};
             dev_info.pNext = &features;
             features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;

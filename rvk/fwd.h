@@ -1,6 +1,10 @@
 
 #pragma once
 
+#ifdef RPP_OS_WINDOWS
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+
 #include <rpp/base.h>
 #include <volk/volk.h>
 
@@ -27,6 +31,10 @@ struct Instance;
 struct Debug_Callback;
 struct Physical_Device;
 struct Device;
+
+struct Image;
+struct Image_View;
+
 struct Swapchain;
 
 String_View describe(VkResult result);
