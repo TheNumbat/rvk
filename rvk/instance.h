@@ -37,12 +37,13 @@ struct Instance {
 
     void imgui();
 
-    Arc<Physical_Device, Alloc> physical_device(Slice<String_View> extensions,
-                                                VkSurfaceKHR surface);
+    Arc<Physical_Device, Alloc> physical_device(VkSurfaceKHR surface, bool ray_tracing);
 
     operator VkInstance() const {
         return instance;
     }
+
+    static Slice<const char*> baseline_extensions();
 
 private:
     void check_extensions(Slice<const char*> extensions);

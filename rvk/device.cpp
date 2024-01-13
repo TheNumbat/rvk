@@ -3,6 +3,156 @@
 
 #include "device.h"
 
+static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
+
+    static VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR ray_position_fetch_features = {};
+    ray_position_fetch_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR;
+    ray_position_fetch_features.rayTracingPositionFetch = VK_TRUE;
+
+    static VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR ray_maintain_features = {};
+    ray_maintain_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR;
+    ray_maintain_features.pNext = &ray_position_fetch_features;
+    ray_maintain_features.rayTracingMaintenance1 = VK_TRUE;
+    ray_maintain_features.rayTracingPipelineTraceRaysIndirect2 = VK_TRUE;
+
+    static VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {};
+    ray_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+    ray_query_features.pNext = &ray_maintain_features;
+    ray_query_features.rayQuery = VK_TRUE;
+
+    static VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_pipeline_features = {};
+    ray_pipeline_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    ray_pipeline_features.pNext = &ray_query_features;
+    ray_pipeline_features.rayTracingPipeline = VK_TRUE;
+    ray_pipeline_features.rayTracingPipelineTraceRaysIndirect = VK_TRUE;
+    ray_pipeline_features.rayTraversalPrimitiveCulling = VK_TRUE;
+
+    static VkPhysicalDeviceAccelerationStructureFeaturesKHR ray_accel_features = {};
+    ray_accel_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    ray_accel_features.pNext = &ray_pipeline_features;
+    ray_accel_features.accelerationStructure = VK_TRUE;
+    ray_accel_features.accelerationStructureCaptureReplay = VK_TRUE;
+
+    static VkPhysicalDeviceShaderClockFeaturesKHR shader_clock_features = {};
+    shader_clock_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
+    if(ray_tracing) {
+        shader_clock_features.pNext = &ray_accel_features;
+    }
+    shader_clock_features.shaderSubgroupClock = VK_TRUE;
+    shader_clock_features.shaderDeviceClock = VK_TRUE;
+
+    static VkPhysicalDeviceVulkan13Features vk13_features = {};
+    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    vk13_features.pNext = &shader_clock_features;
+    vk13_features.robustImageAccess = VK_TRUE;
+    vk13_features.synchronization2 = VK_TRUE;
+    vk13_features.dynamicRendering = VK_TRUE;
+    vk13_features.maintenance4 = VK_TRUE;
+
+    static VkPhysicalDeviceVulkan12Features vk12_features = {};
+    vk12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    vk12_features.pNext = &vk13_features;
+    vk12_features.drawIndirectCount = VK_TRUE;
+    vk12_features.storageBuffer8BitAccess = VK_TRUE;
+    vk12_features.uniformAndStorageBuffer8BitAccess = VK_TRUE;
+    vk12_features.storagePushConstant8 = VK_TRUE;
+    vk12_features.shaderBufferInt64Atomics = VK_TRUE;
+    vk12_features.shaderSharedInt64Atomics = VK_TRUE;
+    vk12_features.shaderFloat16 = VK_TRUE;
+    vk12_features.shaderInt8 = VK_TRUE;
+    vk12_features.descriptorIndexing = VK_TRUE;
+    vk12_features.shaderInputAttachmentArrayDynamicIndexing = VK_TRUE;
+    vk12_features.shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE;
+    vk12_features.shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE;
+    vk12_features.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
+    vk12_features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+    vk12_features.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+    vk12_features.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+    vk12_features.shaderInputAttachmentArrayNonUniformIndexing = VK_TRUE;
+    vk12_features.shaderUniformTexelBufferArrayNonUniformIndexing = VK_TRUE;
+    vk12_features.shaderStorageTexelBufferArrayNonUniformIndexing = VK_TRUE;
+    vk12_features.descriptorBindingPartiallyBound = VK_TRUE;
+    vk12_features.descriptorBindingVariableDescriptorCount = VK_TRUE;
+    vk12_features.runtimeDescriptorArray = VK_TRUE;
+    vk12_features.scalarBlockLayout = VK_TRUE;
+    vk12_features.imagelessFramebuffer = VK_TRUE;
+    vk12_features.uniformBufferStandardLayout = VK_TRUE;
+    vk12_features.separateDepthStencilLayouts = VK_TRUE;
+    vk12_features.bufferDeviceAddress = VK_TRUE;
+    vk12_features.vulkanMemoryModel = VK_TRUE;
+    vk12_features.vulkanMemoryModelDeviceScope = VK_TRUE;
+    vk12_features.vulkanMemoryModelAvailabilityVisibilityChains = VK_TRUE;
+
+    static VkPhysicalDeviceVulkan11Features vk11_features = {};
+    vk11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+    vk11_features.pNext = &vk12_features;
+    vk11_features.storageBuffer16BitAccess = VK_TRUE;
+    vk11_features.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+    vk11_features.storagePushConstant16 = VK_TRUE;
+    vk11_features.variablePointersStorageBuffer = VK_TRUE;
+    vk11_features.variablePointers = VK_TRUE;
+
+    static VkPhysicalDeviceRobustness2FeaturesEXT robust_features = {};
+    robust_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
+    robust_features.pNext = &vk11_features;
+    robust_features.robustBufferAccess2 = VK_TRUE;
+    robust_features.robustImageAccess2 = VK_TRUE;
+    robust_features.nullDescriptor = VK_TRUE;
+
+    static VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_features = {};
+    memory_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
+    memory_features.pNext = &robust_features;
+    memory_features.memoryPriority = VK_TRUE;
+
+    static VkPhysicalDeviceFeatures2 features2 = {};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.pNext = &memory_features;
+    features2.features.robustBufferAccess = VK_TRUE;
+    features2.features.imageCubeArray = VK_TRUE;
+    features2.features.geometryShader = VK_TRUE;
+    features2.features.tessellationShader = VK_TRUE;
+    features2.features.sampleRateShading = VK_TRUE;
+    features2.features.dualSrcBlend = VK_TRUE;
+    features2.features.logicOp = VK_TRUE;
+    features2.features.multiDrawIndirect = VK_TRUE;
+    features2.features.drawIndirectFirstInstance = VK_TRUE;
+    features2.features.depthClamp = VK_TRUE;
+    features2.features.depthBiasClamp = VK_TRUE;
+    features2.features.fillModeNonSolid = VK_TRUE;
+    features2.features.depthBounds = VK_TRUE;
+    features2.features.wideLines = VK_TRUE;
+    features2.features.largePoints = VK_TRUE;
+    features2.features.alphaToOne = VK_TRUE;
+    features2.features.samplerAnisotropy = VK_TRUE;
+    features2.features.occlusionQueryPrecise = VK_TRUE;
+    features2.features.pipelineStatisticsQuery = VK_TRUE;
+    features2.features.vertexPipelineStoresAndAtomics = VK_TRUE;
+    features2.features.fragmentStoresAndAtomics = VK_TRUE;
+    features2.features.shaderTessellationAndGeometryPointSize = VK_TRUE;
+    features2.features.shaderImageGatherExtended = VK_TRUE;
+    features2.features.shaderStorageImageExtendedFormats = VK_TRUE;
+    features2.features.shaderStorageImageMultisample = VK_TRUE;
+    features2.features.shaderStorageImageReadWithoutFormat = VK_TRUE;
+    features2.features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
+    features2.features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+    features2.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    features2.features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+    features2.features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
+    features2.features.shaderClipDistance = VK_TRUE;
+    features2.features.shaderCullDistance = VK_TRUE;
+    features2.features.shaderFloat64 = VK_TRUE;
+    features2.features.shaderInt64 = VK_TRUE;
+    features2.features.shaderInt16 = VK_TRUE;
+    features2.features.shaderResourceResidency = VK_TRUE;
+    features2.features.shaderResourceMinLod = VK_TRUE;
+
+    return &features2;
+}
+
 namespace rvk::impl {
 
 Physical_Device::Physical_Device(VkPhysicalDevice PD) : device(PD) {
@@ -183,15 +333,21 @@ void Physical_Device::imgui() {
     }
 }
 
-Device::Device(Arc<Physical_Device, Alloc> P, Slice<String_View> extensions,
-               VkPhysicalDeviceFeatures2& features, VkSurfaceKHR surface)
+Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tracing)
     : physical_device(move(P)) {
 
     Profile::Time_Point start = Profile::timestamp();
 
-    info("[vrk] Creating device...");
-    Log_Indent {
+    info("[rvk] Creating device...");
 
+    u32 n_graphics_queues = physical_device->queue_count(Queue_Family::graphics);
+    u32 n_compute_queues = physical_device->queue_count(Queue_Family::compute);
+    u32 n_transfer_queues = physical_device->queue_count(Queue_Family::transfer);
+    if(n_graphics_queues + n_compute_queues + n_transfer_queues == 0) {
+        die("[rvk] No queues found.");
+    }
+
+    { // Find queue families
         if(auto idx = physical_device->queue_index(Queue_Family::graphics)) {
             graphics_family_index = *idx;
         } else {
@@ -208,97 +364,101 @@ Device::Device(Arc<Physical_Device, Alloc> P, Slice<String_View> extensions,
             physical_device->queue_index(Queue_Family::compute).value_or(graphics_family_index);
         transfer_family_index =
             physical_device->queue_index(Queue_Family::transfer).value_or(graphics_family_index);
+    }
 
-        u32 n_graphics_queues = physical_device->queue_count(Queue_Family::graphics);
-        u32 n_compute_queues = physical_device->queue_count(Queue_Family::compute);
-        u32 n_transfer_queues = physical_device->queue_count(Queue_Family::transfer);
-
-        u32 max_queues =
-            Math::max(n_graphics_queues, Math::max(n_compute_queues, n_transfer_queues));
-        if(max_queues == 0) {
-            die("[rvk] No queues found.");
-        }
-
+    Log_Indent {
         Region(R) {
+
+            u32 max_queues =
+                Math::max(n_graphics_queues, Math::max(n_compute_queues, n_transfer_queues));
             auto priorities = Vec<f32, Mregion<R>>::make(max_queues);
             priorities[0] = 1.0f;
-
             for(u64 i = 1; i < priorities.length(); i++) {
                 priorities[i] = priorities[i - 1] * 0.9f;
             }
 
-            Vec<VkDeviceQueueCreateInfo, Mregion<R>> queue_infos;
+            // Create queue initialization info
+
+            Vec<VkDeviceQueueCreateInfo, Mregion<R>> queue_infos(
+                n_graphics_queues + n_compute_queues + n_transfer_queues + 1);
             {
-                VkDeviceQueueCreateInfo qinfo = {};
-                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                qinfo.queueFamilyIndex = graphics_family_index;
-                qinfo.queueCount = n_graphics_queues;
-                qinfo.pQueuePriorities = priorities.data();
-                queue_infos.push(qinfo);
+                {
+                    VkDeviceQueueCreateInfo qinfo = {};
+                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                    qinfo.queueFamilyIndex = graphics_family_index;
+                    qinfo.queueCount = n_graphics_queues;
+                    qinfo.pQueuePriorities = priorities.data();
+                    queue_infos.push(qinfo);
+                }
+
+                for(f32& p : priorities) {
+                    p *= 0.9f;
+                }
+
+                if(compute_family_index != graphics_family_index) {
+                    VkDeviceQueueCreateInfo qinfo = {};
+                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                    qinfo.queueFamilyIndex = compute_family_index;
+                    qinfo.queueCount = n_compute_queues;
+                    qinfo.pQueuePriorities = priorities.data();
+                    queue_infos.push(qinfo);
+                } else {
+                    info("[rvk] Using graphics queue family as compute queue family.");
+                }
+                if(transfer_family_index != graphics_family_index) {
+                    VkDeviceQueueCreateInfo qinfo = {};
+                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                    qinfo.queueFamilyIndex = transfer_family_index;
+                    qinfo.queueCount = n_transfer_queues;
+                    qinfo.pQueuePriorities = priorities.data();
+                    queue_infos.push(qinfo);
+                } else {
+                    info("[rvk] Using graphics queue family as transfer queue family.");
+                }
+                if(present_family_index != graphics_family_index) {
+                    VkDeviceQueueCreateInfo qinfo = {};
+                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                    qinfo.queueFamilyIndex = present_family_index;
+                    qinfo.queueCount = 1;
+                    qinfo.pQueuePriorities = priorities.data();
+                    queue_infos.push(qinfo);
+                } else {
+                    info("[rvk] Using graphics queue family as present queue family.");
+                }
             }
 
-            for(f32& p : priorities) {
-                p *= 0.9f;
-            }
-
-            if(compute_family_index != graphics_family_index) {
-                VkDeviceQueueCreateInfo qinfo = {};
-                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                qinfo.queueFamilyIndex = compute_family_index;
-                qinfo.queueCount = n_compute_queues;
-                qinfo.pQueuePriorities = priorities.data();
-                queue_infos.push(qinfo);
-            } else {
-                info("[rvk] Using graphics queue family as compute queue family.");
-            }
-            if(transfer_family_index != graphics_family_index) {
-                VkDeviceQueueCreateInfo qinfo = {};
-                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                qinfo.queueFamilyIndex = transfer_family_index;
-                qinfo.queueCount = n_transfer_queues;
-                qinfo.pQueuePriorities = priorities.data();
-                queue_infos.push(qinfo);
-            } else {
-                info("[rvk] Using graphics queue family as transfer queue family.");
-            }
-            if(present_family_index != graphics_family_index) {
-                VkDeviceQueueCreateInfo qinfo = {};
-                qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                qinfo.queueFamilyIndex = present_family_index;
-                qinfo.queueCount = 1;
-                qinfo.pQueuePriorities = priorities.data();
-                queue_infos.push(qinfo);
-            } else {
-                info("[rvk] Using graphics queue family as present queue family.");
-            }
+            // Create extension info
 
             Vec<const char*, Mregion<R>> vk_extensions;
-            for(auto& ext : extensions) {
-                vk_extensions.push(
-                    reinterpret_cast<const char*>(ext.terminate<Mregion<R>>().data()));
+            {
+                for(auto& ext : baseline_extensions()) {
+                    vk_extensions.push(ext);
+                }
+                if(ray_tracing) {
+                    for(auto& ext : ray_tracing_extensions()) {
+                        vk_extensions.push(ext);
+                    }
+                }
             }
 
-            vk_extensions.push(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME);
-            vk_extensions.push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
-            vk_extensions.push(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
-            vk_extensions.push(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
-#ifdef RPP_OS_WINDOWS
-            vk_extensions.push(VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME);
-#else
-            vk_extensions.push(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME);
-#endif
+            // Create device
 
-            VkDeviceCreateInfo dev_info = {};
-            dev_info.pNext = &features;
-            features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-            dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-            dev_info.queueCreateInfoCount = static_cast<u32>(queue_infos.length());
-            dev_info.pQueueCreateInfos = queue_infos.data();
-            dev_info.enabledExtensionCount = static_cast<u32>(vk_extensions.length());
-            dev_info.ppEnabledExtensionNames = vk_extensions.data();
+            {
+                VkDeviceCreateInfo dev_info = {};
+                dev_info.pNext = baseline_features(ray_tracing);
+                dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+                dev_info.queueCreateInfoCount = static_cast<u32>(queue_infos.length());
+                dev_info.pQueueCreateInfos = queue_infos.data();
+                dev_info.enabledExtensionCount = static_cast<u32>(vk_extensions.length());
+                dev_info.ppEnabledExtensionNames = vk_extensions.data();
 
-            RVK_CHECK(vkCreateDevice(*physical_device, &dev_info, null, &device));
+                RVK_CHECK(vkCreateDevice(*physical_device, &dev_info, null, &device));
+            }
+        }
 
+        // Get queues
+
+        {
             graphics_qs.resize(n_graphics_queues);
             compute_qs.resize(n_compute_queues);
             transfer_qs.resize(n_transfer_queues);
@@ -336,23 +496,27 @@ Device::Device(Arc<Physical_Device, Alloc> P, Slice<String_View> extensions,
              transfer_family_index);
         info("[rvk] Got present queue from family %.", present_family_index);
 
-        if(auto idx =
-               physical_device->heap_index(RPP_UINT32_MAX, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
-            device_memory_index = *idx;
-        } else {
-            die("[rvk] No device local heap found.");
-        }
+        // Find heaps
 
-        if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
-                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-            host_memory_index = *idx;
-        } else {
-            die("[rvk] No host visible heap found.");
-        }
+        {
+            if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
+                                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+                device_memory_index = *idx;
+            } else {
+                die("[rvk] No device local heap found.");
+            }
 
-        info("[rvk] Found device and host heaps (%mb, %mb).", heap_size(Heap::device) / Math::MB(1),
-             heap_size(Heap::host) / Math::MB(1));
+            if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
+                                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+                host_memory_index = *idx;
+            } else {
+                die("[rvk] No host visible heap found.");
+            }
+
+            info("[rvk] Found device and host heaps (%mb, %mb).",
+                 heap_size(Heap::device) / Math::MB(1), heap_size(Heap::host) / Math::MB(1));
+        }
 
         volkLoadDevice(device);
         info("[rvk] Loaded device functions.");
@@ -448,6 +612,33 @@ void Device::imgui() {
             Text("%.*s", ext.length(), reinterpret_cast<const char*>(ext.data()));
         TreePop();
     }
+}
+
+Slice<const char*> Device::baseline_extensions() {
+    static Array<const char*, 6> device{
+        reinterpret_cast<const char*>(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_KHR_SHADER_CLOCK_EXTENSION_NAME),
+#ifdef RPP_OS_WINDOWS
+        reinterpret_cast<const char*>(VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME),
+#else
+        reinterpret_cast<const char*>(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME),
+#endif
+    };
+    return Slice<const char*>{device};
+}
+
+Slice<const char*> Device::ray_tracing_extensions() {
+    static Array<const char*, 5> device{
+        reinterpret_cast<const char*>(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME),
+    };
+    return Slice<const char*>{device};
 }
 
 } // namespace rvk::impl
