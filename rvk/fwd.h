@@ -14,11 +14,11 @@
     } while(0)
 
 namespace rvk {
-namespace impl {
 
 using namespace rpp;
-
 using Alloc = Mallocator<"rvk">;
+
+namespace impl {
 
 struct Instance;
 struct Debug_Callback;

@@ -1,7 +1,9 @@
 
-#include "rvk.h"
+#include <imgui/imgui.h>
+
 #include "device.h"
 #include "instance.h"
+#include "rvk.h"
 
 namespace rvk {
 
@@ -12,13 +14,24 @@ namespace impl {
 struct Vk {
     Rc<Instance, Alloc> instance;
     Rc<Debug_Callback, Alloc> debug_callback;
+
+    VkSurfaceKHR surface;
     Rc<Physical_Device, Alloc> physical_device;
 
     Vk(Config config) {
+
         instance = Rc<Instance, Alloc>{move(config.instance_extensions), move(config.layers),
                                        config.validation};
+
         debug_callback = Rc<Debug_Callback, Alloc>{instance.dup()};
-        physical_device = instance->physical_device(config.device_extensions, config.surface);
+
+        surface = config.create_surface(*instance);
+
+        physical_device = instance->physical_device(config.device_extensions, surface);
+    }
+
+    ~Vk() {
+        vkDestroySurfaceKHR(*instance, surface, null);
     }
 };
 
@@ -105,22 +118,38 @@ String_View describe(VkResult result) {
     }
 }
 
+using ImGui_Alloc = Mallocator<"ImGui">;
+
+static void* imgui_alloc(u64 sz, void*) {
+    return ImGui_Alloc::alloc(sz);
+}
+
+static void imgui_free(void* mem, void*) {
+    ImGui_Alloc::free(mem);
+}
+
 } // namespace impl
 
 bool startup(Config config) {
     if(impl::singleton) {
-        die("[rvk] already started up!");
+        die("[rvk] Already started up!");
     }
     Profile::Time_Point start = Profile::timestamp();
-    impl::singleton = impl::Vk{config};
+
+    ImGui::SetAllocatorFunctions(impl::imgui_alloc, impl::imgui_free);
+    ImGui::CreateContext();
+
+    impl::singleton.emplace(move(config));
+
     Profile::Time_Point end = Profile::timestamp();
-    info("[rvk] completed startup in %ms", Profile::ms(end - start));
+    info("[rvk] Completed startup in %ms.", Profile::ms(end - start));
     return true;
 }
 
 void shutdown() {
-    impl::singleton = {};
-    info("[rvk] completed shutdown");
+    ImGui::DestroyContext();
+    impl::singleton.clear();
+    info("[rvk] Completed shutdown.");
 }
 
 } // namespace rvk

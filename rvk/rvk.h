@@ -10,12 +10,12 @@ namespace rvk {
 using namespace rpp;
 
 struct Config {
+    bool validation = true;
     Slice<String_View> layers;
     Slice<String_View> instance_extensions;
-    bool validation = true;
 
     Slice<String_View> device_extensions;
-    VkSurfaceKHR surface = null;
+    Function<VkSurfaceKHR(VkInstance)> create_surface;
 };
 
 bool startup(Config config);

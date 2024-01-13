@@ -285,7 +285,7 @@ Rc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensio
         }
 
         u32 idx = discrete_idx ? *discrete_idx : 0;
-        info("Selected device: %.", compatible_devices[idx]->name());
+        info("[rvk] Selected device: %.", compatible_devices[idx]->name());
 
         return move(compatible_devices.front());
     }
@@ -309,13 +309,13 @@ Debug_Callback::Debug_Callback(Rc<Instance, Alloc> I) : instance(move(I)) {
     RVK_CHECK(vkCreateDebugUtilsMessengerEXT(*instance, &callback, null, &messenger));
 
     Profile::Time_Point end = Profile::timestamp();
-    info("[rvk] created debug utils messenger in %ms", Profile::ms(end - start));
+    info("[rvk] Created debug messenger in %ms.", Profile::ms(end - start));
 }
 
 Debug_Callback::~Debug_Callback() {
     if(messenger) {
         vkDestroyDebugUtilsMessengerEXT(*instance, messenger, null);
-        info("[rvk] destroyed debug utils messenger");
+        info("[rvk] Destroyed debug messenger.");
     }
     instance = {};
     messenger = null;
