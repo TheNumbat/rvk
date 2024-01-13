@@ -4,13 +4,11 @@ project(rvk_tests LANGUAGES CXX)
 
 file(GLOB TEST_SOURCES *.cpp)
 
-add_subdirectory("rpp/rpp")
-
 foreach(test ${TEST_SOURCES})
     get_filename_component(testname ${test} NAME_WE)
     add_executable(${testname} ${test})
 
     set_target_properties(${testname} PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF LINKER_LANGUAGE CXX)
-    target_link_libraries(${testname} PRIVATE rpp rvk)
-    target_include_directories(${testname} PRIVATE "rpp" "..")
+    target_link_libraries(${testname} PRIVATE rvk)
+    target_include_directories(${testname} PRIVATE ${RVK_INCLUDE_DIRS})
 endforeach(test ${TEST_SOURCES})

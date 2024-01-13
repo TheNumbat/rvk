@@ -19,3 +19,57 @@ Includes the following features:
 - Pipeline creation (no cache)
 - Compile-time descriptor set layout specifications
 - Async GPU tasks (for the _rpp_ coroutine scheduler)
+
+## Integration
+
+To use rvk in your project, run the following command (or manually download the source):
+
+```bash
+git submodule add https://github.com/TheNumbat/rvk
+```
+
+Then add the following lines to your CMakeLists.txt:
+
+```cmake
+add_subdirectory(rvk)
+target_link_libraries($your_target PRIVATE rvk)
+target_include_directories($your_target PRIVATE ${RVK_INCLUDE_DIRS})
+```
+
+If you're already using rpp, also set the following option:
+
+```cmake
+set(RVK_HAS_RPP)
+```
+
+## Build and Run Tests
+
+To build rvk and run the tests, run the following commands:
+
+### Windows
+
+Assure MSVC 19.37 and cmake 3.17 (or newer) are installed and in your PATH.
+
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build . -DRVK_TEST=ON
+ctest -C Debug
+```
+
+For faster parallel builds, you can instead generate [ninja](https://ninja-build.org/) build files with `cmake -G Ninja ..`.
+
+### Linux
+
+Assure clang-17 and cmake 3.17 (or newer) are installed.
+
+```bash
+mkdir build
+cd build
+CXX=clang++-17 cmake .. -DRVK_TEST=ON
+make -j
+ctest -C Debug
+```
+
+For faster parallel builds, you can instead generate [ninja](https://ninja-build.org/) build files with `cmake -G Ninja ..`.
