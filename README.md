@@ -26,6 +26,7 @@ To use rvk in your project, run the following command (or manually download the 
 
 ```bash
 git submodule add https://github.com/TheNumbat/rvk
+git submodule update --init --recursive
 ```
 
 Then add the following lines to your CMakeLists.txt:
@@ -41,6 +42,8 @@ If you're already using rpp, also set the following option:
 ```cmake
 set(RVK_HAS_RPP)
 ```
+
+Alternatively, to start an rvk project from scratch, you can fork [rpp_example_project/rvk](https://github.com/TheNumbat/rpp_example_project/tree/rvk).
 
 ## Build and Run Tests
 
