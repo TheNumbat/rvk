@@ -1,0 +1,12 @@
+name: Windows
+on: [push]
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Configure
+      run: cmake -S . -B build -DRPP_TEST=ON
+    - name: Build
+      run: cmake --build build --config Release
