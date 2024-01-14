@@ -2,14 +2,15 @@
 
 (WIP; refactoring into new repo)
 
-[rpp](https://github.com/TheNumbat/rpp)-based Vulkan abstraction layer.
+[rpp](https://github.com/TheNumbat/rpp)-based Vulkan 1.3 abstraction layer.
 
-Does not seek to redefine the Vulkan API: instead provides a convenient interface for common use cases.
-Includes the following features:
+rvk does not seek to redefine the Vulkan API, nor expose all of its configurability.
+Instead, rvk provides a convenient interface for modern desktop GPUs.
+It includes the following features:
 
 - RAII wrappers for Vulkan objects
 - GPU heap allocator and buffer sub-allocators
-- Multiple frames in flight and resource delete queue
+- Multiple frames in flight and resource deletion queue
 - Async GPU tasks for coroutines
 - Swapchain management and compositor
 - Validation layer config and debug messaging

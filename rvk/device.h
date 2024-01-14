@@ -23,6 +23,9 @@ struct Physical_Device {
         VkPhysicalDeviceMaintenance3Properties maintenance3 = {};
         VkPhysicalDeviceMaintenance4Properties maintenance4 = {};
         VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing = {};
+
+        String_View name() const;
+        bool is_discrete() const;
     };
 
     ~Physical_Device() = default;
@@ -42,9 +45,8 @@ struct Physical_Device {
     Pair<u64, u64> heap_stat(u32 heap);
     Opt<u32> heap_index(u32 mask, u32 properties);
 
-    String_View name();
-    bool is_discrete();
     bool supports_extension(String_View name);
+    VkSurfaceCapabilitiesKHR capabilities(VkSurfaceKHR surface);
 
     const Properties& properties() const {
         return properties_;

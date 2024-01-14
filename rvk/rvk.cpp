@@ -1,10 +1,12 @@
 
 #include <imgui/imgui.h>
 
+#include "descriptors.h"
 #include "device.h"
 #include "instance.h"
 #include "memory.h"
 #include "rvk.h"
+#include "swapchain.h"
 
 namespace rvk {
 
@@ -19,6 +21,8 @@ struct Vk {
     Arc<Device, Alloc> device;
     Arc<Device_Memory, Alloc> host_memory;
     Arc<Device_Memory, Alloc> device_memory;
+    Arc<Swapchain, Alloc> swapchain;
+    Arc<Descriptor_Pool, Alloc> descriptor_pool;
 
     VkSurfaceKHR surface;
 
@@ -41,6 +45,13 @@ struct Vk {
         device_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::device,
                                                         device->heap_size(Heap::device) -
                                                             config.device_heap_margin);
+
+        descriptor_pool = Arc<Descriptor_Pool, Alloc>::make(
+            device.dup(), config.descriptors_per_type, config.ray_tracing);
+
+        // TODO make this initialize the images
+        swapchain = Arc<Swapchain, Alloc>::make(physical_device, device.dup(), surface,
+                                                config.frames_in_flight);
     }
 
     ~Vk() {

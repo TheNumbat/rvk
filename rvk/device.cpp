@@ -243,12 +243,12 @@ Opt<u32> Physical_Device::present_queue_index(VkSurfaceKHR surface) {
     return {};
 }
 
-bool Physical_Device::is_discrete() {
-    return properties_.device.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+bool Physical_Device::Properties::is_discrete() const {
+    return device.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 }
 
-String_View Physical_Device::name() {
-    return String_View{properties_.device.properties.deviceName};
+String_View Physical_Device::Properties::name() const {
+    return String_View{device.properties.deviceName};
 }
 
 bool Physical_Device::supports_extension(String_View name) {
@@ -313,6 +313,12 @@ Opt<u32> Physical_Device::heap_index(u32 mask, u32 type) {
         }
     }
     return {};
+}
+
+VkSurfaceCapabilitiesKHR Physical_Device::capabilities(VkSurfaceKHR surface) {
+    VkSurfaceCapabilitiesKHR capabilities;
+    RVK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &capabilities));
+    return capabilities;
 }
 
 void Physical_Device::imgui() {

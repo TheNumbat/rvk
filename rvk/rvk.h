@@ -12,6 +12,8 @@ using namespace rpp;
 struct Config {
     bool validation = true;
     bool ray_tracing = false;
+    u32 frames_in_flight = 2;
+    u32 descriptors_per_type = 128;
 
     Slice<String_View> layers;
     Slice<String_View> swapchain_extensions;

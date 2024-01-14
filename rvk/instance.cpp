@@ -231,7 +231,7 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
         Vec<Arc<Physical_Device, Alloc>, Mregion<R>> compatible_devices;
 
         for(auto& device : physical_devices) {
-            info("[rvk] Checking device: %", device->name());
+            info("[rvk] Checking device: %", device->properties().name());
             Log_Indent {
                 auto surface_formats = device->template surface_formats<R>(surface);
                 if(surface_formats.empty()) {
@@ -296,7 +296,7 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
 
         Opt<u32> discrete_idx;
         for(u32 i = 0; i < compatible_devices.length(); i++) {
-            if(compatible_devices[i]->is_discrete()) {
+            if(compatible_devices[i]->properties().is_discrete()) {
                 discrete_idx = Opt<u32>{i};
                 break;
             }
@@ -305,11 +305,12 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
         if(!discrete_idx) {
             info("[rvk] No discrete GPU found, selecting first compatible device.");
         } else {
-            info("[rvk] Found discrete GPU: %.", compatible_devices[*discrete_idx]->name());
+            info("[rvk] Found discrete GPU: %.",
+                 compatible_devices[*discrete_idx]->properties().name());
         }
 
         u32 idx = discrete_idx ? *discrete_idx : 0;
-        info("[rvk] Selected device: %.", compatible_devices[idx]->name());
+        info("[rvk] Selected device: %.", compatible_devices[idx]->properties().name());
 
         return move(compatible_devices.front());
     }

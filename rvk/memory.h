@@ -25,10 +25,13 @@ struct Device_Memory {
     Device_Memory(Device_Memory&&) = delete;
     Device_Memory& operator=(Device_Memory&&) = delete;
 
-    // Opt<Buffer> allocate(u64 size, VkBufferUsageFlags usage);
-    Opt<Image> allocate(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
+    operator VkDeviceMemory() {
+        return device_memory;
+    }
 
     Heap_Allocator::Stats stats();
+
+    Opt<Image> make(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
 private:
     explicit Device_Memory(const Arc<Physical_Device, Alloc>& physical_device,
@@ -67,8 +70,8 @@ struct Image {
     }
 
 private:
-    Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
-          VkFormat format)
+    explicit Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
+                   VkFormat format)
         : memory(move(memory)), image(image), format_(format), address(address){};
 
     Arc<Device_Memory, Alloc> memory;
@@ -83,7 +86,7 @@ private:
 
 struct Image_View {
 
-    explicit Image_View(Arc<Image, Alloc> image, VkImageAspectFlags aspect);
+    explicit Image_View(Image& image, VkImageAspectFlags aspect);
     ~Image_View();
 
     Image_View(const Image_View& src) = delete;
@@ -99,7 +102,7 @@ struct Image_View {
     }
 
 private:
-    Arc<Image, Alloc> image;
+    Arc<Device, Alloc> device;
 
     VkImageView view = null;
     VkImageAspectFlags aspect_mask = 0;

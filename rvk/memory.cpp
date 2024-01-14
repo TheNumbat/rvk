@@ -58,7 +58,7 @@ void Device_Memory::release(Heap_Allocator::Range address) {
     allocator.free(address);
 }
 
-Opt<Image> Device_Memory::allocate(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage) {
+Opt<Image> Device_Memory::make(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage) {
 
     VkImage image = null;
 
@@ -93,10 +93,11 @@ Opt<Image> Device_Memory::allocate(VkExtent3D extent, VkFormat format, VkImageUs
 
     vkGetImageMemoryRequirements2(*device, &image_requirements, &memory_requirements);
 
-    auto memory = allocator.allocate(
+    auto address = allocator.allocate(
         memory_requirements.memoryRequirements.size,
         Math::max(memory_requirements.memoryRequirements.alignment, buffer_image_granularity));
-    if(!memory) {
+
+    if(!address) {
         vkDestroyImage(*device, image, null);
         return {};
     }
@@ -105,11 +106,11 @@ Opt<Image> Device_Memory::allocate(VkExtent3D extent, VkFormat format, VkImageUs
     bind.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO;
     bind.memory = device_memory;
     bind.image = image;
-    bind.memoryOffset = (*memory)->offset;
+    bind.memoryOffset = (*address)->offset;
 
     RVK_CHECK(vkBindImageMemory2(*device, 1, &bind));
 
-    return Opt<Image>{Image{Arc<Device_Memory, Alloc>::from_this(this), *memory, image, format}};
+    return Opt{Image{Arc<Device_Memory, Alloc>::from_this(this), *address, image, format}};
 }
 
 Image::~Image() {
@@ -138,14 +139,14 @@ Image& Image::operator=(Image&& src) {
     return *this;
 }
 
-Image_View::Image_View(Arc<Image, Alloc> I, VkImageAspectFlags aspect)
-    : image(move(I)), aspect_mask(aspect) {
+Image_View::Image_View(Image& image, VkImageAspectFlags aspect)
+    : device(image.memory->device.dup()), aspect_mask(aspect) {
 
     VkImageViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = *image;
+    view_info.image = image;
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_info.format = image->format();
+    view_info.format = image.format();
     view_info.components.r = VK_COMPONENT_SWIZZLE_R;
     view_info.components.g = VK_COMPONENT_SWIZZLE_G;
     view_info.components.b = VK_COMPONENT_SWIZZLE_B;
@@ -156,11 +157,11 @@ Image_View::Image_View(Arc<Image, Alloc> I, VkImageAspectFlags aspect)
     view_info.subresourceRange.baseArrayLayer = 0;
     view_info.subresourceRange.layerCount = 1;
 
-    RVK_CHECK(vkCreateImageView(*image->memory->device, &view_info, null, &view));
+    RVK_CHECK(vkCreateImageView(*device, &view_info, null, &view));
 }
 
 Image_View::~Image_View() {
-    if(view) vkDestroyImageView(*image->memory->device, view, null);
+    if(view) vkDestroyImageView(*device, view, null);
     view = null;
 }
 

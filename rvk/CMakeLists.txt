@@ -14,6 +14,8 @@ set(SOURCES_RVK
     "swapchain.cpp"
     "memory.cpp"
     "memory.h"
+    "descriptors.cpp"
+    "descriptors.h"
 )
 
 if(UNIX AND NOT APPLE)

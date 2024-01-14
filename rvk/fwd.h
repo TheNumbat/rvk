@@ -32,10 +32,11 @@ struct Debug_Callback;
 struct Physical_Device;
 struct Device;
 struct Device_Memory;
-
 struct Image;
 struct Image_View;
-
+struct Descriptor_Set_Layout;
+struct Descriptor_Set;
+struct Descriptor_Pool;
 struct Swapchain;
 
 String_View describe(VkResult result);
