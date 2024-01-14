@@ -25,7 +25,9 @@ else()
     target_compile_options(volk PRIVATE -mavx2 -Wall -Wextra)
 endif()
 
-if(NOT WIN32)
+if(WIN32)
+    target_compile_definitions(volk PRIVATE VK_USE_PLATFORM_WIN32_KHR)
+else()
     target_link_libraries(volk PRIVATE dl)
 endif()
 

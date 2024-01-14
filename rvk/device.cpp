@@ -621,7 +621,8 @@ void Device::imgui() {
 }
 
 Slice<const char*> Device::baseline_extensions() {
-    static Array<const char*, 6> device{
+    static Array<const char*, 7> device{
+        reinterpret_cast<const char*>(VK_KHR_SWAPCHAIN_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME),

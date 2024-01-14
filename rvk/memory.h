@@ -71,8 +71,7 @@ struct Image {
 
 private:
     explicit Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
-                   VkFormat format)
-        : memory(move(memory)), image(image), format_(format), address(address){};
+                   VkFormat format);
 
     Arc<Device_Memory, Alloc> memory;
 

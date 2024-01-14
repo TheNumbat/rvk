@@ -59,7 +59,7 @@ Swapchain::Swapchain(Arc<Physical_Device, Alloc>& physical_device, Arc<Device, A
     sw_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     Array<u32, 2> queue_indices{*physical_device->queue_index(Queue_Family::graphics),
-                                *physical_device->present_queue_index(surface) };
+                                *physical_device->present_queue_index(surface)};
 
     if(queue_indices[0] != queue_indices[1]) {
 

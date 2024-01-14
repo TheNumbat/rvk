@@ -16,6 +16,8 @@ set(SOURCES_RVK
     "memory.h"
     "descriptors.cpp"
     "descriptors.h"
+    "commands.h"
+    "commands.cpp"
 )
 
 if(UNIX AND NOT APPLE)

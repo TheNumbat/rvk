@@ -1,6 +1,7 @@
 
 #include <imgui/imgui.h>
 
+#include "commands.h"
 #include "descriptors.h"
 #include "device.h"
 #include "instance.h"
@@ -23,21 +24,22 @@ struct Vk {
     Arc<Device_Memory, Alloc> device_memory;
     Arc<Swapchain, Alloc> swapchain;
     Arc<Descriptor_Pool, Alloc> descriptor_pool;
-
-    VkSurfaceKHR surface;
+    Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc> graphics_command_pool;
+    Arc<Command_Pool_Manager<Queue_Family::transfer>, Alloc> transfer_command_pool;
+    Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc> compute_command_pool;
 
     explicit Vk(Config config) {
 
-        instance = Arc<Instance, Alloc>::make(move(config.swapchain_extensions),
-                                              move(config.layers), config.validation);
+        instance =
+            Arc<Instance, Alloc>::make(move(config.swapchain_extensions), move(config.layers),
+                                       move(config.create_surface), config.validation);
 
         debug_callback = Arc<Debug_Callback, Alloc>::make(instance.dup());
 
-        surface = config.create_surface(*instance);
+        physical_device = instance->physical_device(instance->surface(), config.ray_tracing);
 
-        physical_device = instance->physical_device(surface, config.ray_tracing);
-
-        device = Arc<Device, Alloc>::make(physical_device.dup(), surface, config.ray_tracing);
+        device = Arc<Device, Alloc>::make(physical_device.dup(), instance->surface(),
+                                          config.ray_tracing);
 
         host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
                                                       config.host_heap);
@@ -49,13 +51,18 @@ struct Vk {
         descriptor_pool = Arc<Descriptor_Pool, Alloc>::make(
             device.dup(), config.descriptors_per_type, config.ray_tracing);
 
-        // TODO make this initialize the images
-        swapchain = Arc<Swapchain, Alloc>::make(physical_device, device.dup(), surface,
-                                                config.frames_in_flight);
-    }
+        graphics_command_pool =
+            Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>::make(device.dup());
 
-    ~Vk() {
-        vkDestroySurfaceKHR(*instance, surface, null);
+        transfer_command_pool =
+            Arc<Command_Pool_Manager<Queue_Family::transfer>, Alloc>::make(device.dup());
+
+        compute_command_pool =
+            Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc>::make(device.dup());
+
+        // TODO make this initialize the images
+        swapchain = Arc<Swapchain, Alloc>::make(physical_device, device.dup(), instance->surface(),
+                                                config.frames_in_flight);
     }
 };
 

@@ -113,6 +113,10 @@ Opt<Image> Device_Memory::make(VkExtent3D extent, VkFormat format, VkImageUsageF
     return Opt{Image{Arc<Device_Memory, Alloc>::from_this(this), *address, image, format}};
 }
 
+Image::Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
+             VkFormat format)
+    : memory(move(memory)), image(image), format_(format), address(address){};
+
 Image::~Image() {
     if(image) {
         vkDestroyImage(*memory->device, image, null);

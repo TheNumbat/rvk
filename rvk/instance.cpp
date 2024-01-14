@@ -65,7 +65,8 @@ Slice<const char*> Instance::baseline_extensions() {
     return Slice<const char*>{instance};
 }
 
-Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers, bool validation) {
+Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers,
+                   Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation) {
 
     Profile::Time_Point start = Profile::timestamp();
 
@@ -149,12 +150,24 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers, boo
         Profile::Time_Point end = Profile::timestamp();
         info("[rvk] Created instance in %ms.", Profile::ms(end - start));
     }
+
+    {
+        surface_ = create_surface(instance);
+        info("[rvk] Created surface.");
+    }
 }
 
 Instance::~Instance() {
+    if(surface_) {
+        vkDestroySurfaceKHR(instance, surface_, null);
+        info("[rvk] Destroyed surface.");
+    }
     if(instance) {
         vkDestroyInstance(instance, null);
         info("[rvk] Destroyed instance.");
+
+        volkFinalize();
+        info("[rvk] Unloaded instance functions.");
     }
     instance = null;
 }

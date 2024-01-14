@@ -40,19 +40,25 @@ struct Instance {
 
     Arc<Physical_Device, Alloc> physical_device(VkSurfaceKHR surface, bool ray_tracing);
 
-    operator VkInstance() const {
+    operator VkInstance() {
         return instance;
+    }
+    VkSurfaceKHR surface() {
+        return surface_;
     }
 
     static Slice<const char*> baseline_extensions();
 
 private:
-    explicit Instance(Slice<String_View> extensions, Slice<String_View> layers, bool validation);
+    explicit Instance(Slice<String_View> extensions, Slice<String_View> layers,
+                      Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation);
     friend struct Arc<Instance, Alloc>;
 
     void check_extensions(Slice<const char*> extensions);
 
     VkInstance instance = null;
+    VkSurfaceKHR surface_ = null;
+
     Vec<String<Alloc>, Alloc> enabled_layers;
     Vec<String<Alloc>, Alloc> enabled_extensions;
     Vec<VkExtensionProperties, Alloc> available_extensions;

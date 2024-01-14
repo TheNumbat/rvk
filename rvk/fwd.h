@@ -37,6 +37,12 @@ struct Image_View;
 struct Descriptor_Set_Layout;
 struct Descriptor_Set;
 struct Descriptor_Pool;
+struct Fence;
+struct Semaphore;
+struct Commands;
+struct Command_Pool;
+template<Queue_Family F>
+struct Command_Pool_Manager;
 struct Swapchain;
 
 String_View describe(VkResult result);
