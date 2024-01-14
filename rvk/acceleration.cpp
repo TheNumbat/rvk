@@ -31,7 +31,7 @@ TLAS& TLAS::operator=(TLAS&& src) {
     return *this;
 }
 
-Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer instances, u32 n_instances) {
+Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& instances, u32 n_instances) {
 
     assert(instances.length());
 
@@ -73,7 +73,7 @@ Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer instances,
                                                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     if(!scratch) return {};
 
-    return Opt<Staged>{Staged{move(*structure_buf), move(*scratch), move(instances), n_instances,
+    return Opt<Staged>{Staged{move(*structure_buf), move(*scratch), instances, n_instances,
                               build_sizes.accelerationStructureSize, move(memory)}};
 }
 
@@ -115,7 +115,6 @@ TLAS TLAS::build(Commands& cmds, Staged buffers) {
     build_info.dstAccelerationStructure = acceleration_structure;
 
     cmds.attach(move(buffers.scratch));
-    cmds.attach(move(buffers.instances));
 
     VkAccelerationStructureBuildRangeInfoKHR offset = {};
     offset.primitiveCount = buffers.n_instances;
@@ -160,7 +159,7 @@ u64 BLAS::gpu_address() {
     return vkGetAccelerationStructureDeviceAddressKHR(*memory->device, &info);
 }
 
-Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
+Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& data,
                              Vec<BLAS::Offsets, Alloc> offsets) {
 
     if(offsets.length() == 0) {
@@ -224,7 +223,7 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
                                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         if(!scratch) return {};
 
-        return Opt{Staged{move(*structure_buf), move(*scratch), move(data),
+        return Opt{Staged{move(*structure_buf), move(*scratch), data,
                           build_sizes.accelerationStructureSize, move(offsets), move(memory)}};
     }
 }
@@ -289,7 +288,6 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
         build_info.dstAccelerationStructure = acceleration_structure;
 
         cmds.attach(move(buffers.scratch));
-        cmds.attach(move(buffers.geometry));
 
         Array<VkAccelerationStructureBuildRangeInfoKHR*, 1> range_ptrs{ranges.data()};
 

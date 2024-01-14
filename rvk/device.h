@@ -105,8 +105,10 @@ struct Device {
     u64 queue_count(Queue_Family family);
     VkQueue queue(Queue_Family family, u32 index = 0);
 
+    void submit(Commands& cmds, u32 index);
     void submit(Commands& cmds, u32 index, Fence& fence);
-    void submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait,
+    void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal);
+    void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal,
                 Fence& fence);
 
     operator VkDevice() const {

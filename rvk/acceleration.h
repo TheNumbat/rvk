@@ -15,15 +15,15 @@ using namespace rpp;
 struct TLAS {
     struct Staged {
     private:
-        explicit Staged(Buffer result, Buffer scratch, Buffer instances, u32 n_instances,
+        explicit Staged(Buffer result, Buffer scratch, Buffer& instances, u32 n_instances,
                         u64 result_size, Arc<Device_Memory, Alloc> memory)
-            : result(move(result)), scratch(move(scratch)), instances(move(instances)),
+            : result(move(result)), scratch(move(scratch)), instances(instances),
               n_instances(n_instances), result_size(result_size), memory(move(memory)) {
         }
 
         Buffer result;
         Buffer scratch;
-        Buffer instances;
+        Buffer& instances;
         u32 n_instances = 0;
         u64 result_size = 0;
         Arc<Device_Memory, Alloc> memory;
@@ -41,7 +41,7 @@ struct TLAS {
 
     using Instance = VkAccelerationStructureInstanceKHR;
 
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer instances, u32 n_instances);
+    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& instances, u32 n_instances);
 
     static TLAS build(Commands& cmds, Staged gpu_data);
 
@@ -71,15 +71,15 @@ struct BLAS {
 
     struct Staged {
     private:
-        explicit Staged(Buffer result, Buffer scratch, Buffer geometry, u64 result_size,
+        explicit Staged(Buffer result, Buffer scratch, Buffer& geometry, u64 result_size,
                         Vec<Offsets, Alloc> offsets, Arc<Device_Memory, Alloc> memory)
-            : result(move(result)), scratch(move(scratch)), geometry(move(geometry)),
+            : result(move(result)), scratch(move(scratch)), geometry(geometry),
               result_size(result_size), offsets(move(offsets)), memory(move(memory)) {
         }
 
         Buffer result;
         Buffer scratch;
-        Buffer geometry;
+        Buffer& geometry;
         u64 result_size = 0;
         Vec<Offsets, Alloc> offsets;
         Arc<Device_Memory, Alloc> memory;
@@ -94,7 +94,7 @@ struct BLAS {
     BLAS(BLAS&& src);
     BLAS& operator=(BLAS&& src);
 
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer geometry,
+    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& geometry,
                             Vec<Offsets, Alloc> offsets);
 
     static BLAS build(Commands& cmds, Staged buffers);

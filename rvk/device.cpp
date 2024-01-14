@@ -605,6 +605,25 @@ u32 Device::queue_index(Queue_Family family) {
     }
 }
 
+void Device::submit(Commands& cmds, u32 index) {
+
+    cmds.end();
+
+    VkCommandBufferSubmitInfo cmd_info = {};
+    cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    cmd_info.commandBuffer = cmds;
+
+    VkSubmitInfo2 submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submit_info.commandBufferInfoCount = 1;
+    submit_info.pCommandBufferInfos = &cmd_info;
+
+    {
+        Thread::Lock lock(mutex);
+        RVK_CHECK(vkQueueSubmit2(queue(cmds.family(), index), 1, &submit_info, null));
+    }
+}
+
 void Device::submit(Commands& cmds, u32 index, Fence& fence) {
 
     cmds.end();
@@ -622,6 +641,50 @@ void Device::submit(Commands& cmds, u32 index, Fence& fence) {
     {
         Thread::Lock lock(mutex);
         RVK_CHECK(vkQueueSubmit2(queue(cmds.family(), index), 1, &submit_info, fence));
+    }
+}
+
+void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait) {
+
+    cmds.end();
+
+    Region(R) {
+
+        Vec<VkSemaphoreSubmitInfo, Mregion<R>> vk_signal(signal.length());
+        Vec<VkSemaphoreSubmitInfo, Mregion<R>> vk_wait(wait.length());
+
+        for(u64 i = 0; i < signal.length(); i++) {
+            VkSemaphoreSubmitInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            info.semaphore = *signal[i].sem;
+            info.stageMask = signal[i].stage;
+            vk_signal.push(info);
+        }
+        for(u64 i = 0; i < wait.length(); i++) {
+            VkSemaphoreSubmitInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            info.semaphore = *wait[i].sem;
+            info.stageMask = wait[i].stage;
+            vk_wait.push(info);
+        }
+
+        VkCommandBufferSubmitInfo cmd_info = {};
+        cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        cmd_info.commandBuffer = cmds;
+
+        VkSubmitInfo2 submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        submit_info.commandBufferInfoCount = 1;
+        submit_info.pCommandBufferInfos = &cmd_info;
+        submit_info.signalSemaphoreInfoCount = static_cast<u32>(vk_signal.length());
+        submit_info.pSignalSemaphoreInfos = vk_signal.data();
+        submit_info.waitSemaphoreInfoCount = static_cast<u32>(vk_wait.length());
+        submit_info.pWaitSemaphoreInfos = vk_wait.data();
+
+        {
+            Thread::Lock lock(mutex);
+            RVK_CHECK(vkQueueSubmit2(queue(cmds.family(), index), 1, &submit_info, null));
+        }
     }
 }
 

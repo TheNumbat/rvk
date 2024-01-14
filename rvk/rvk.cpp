@@ -105,7 +105,7 @@ struct Deletion_Queue {
     Deletion_Queue(const Deletion_Queue&) = delete;
     Deletion_Queue& operator=(const Deletion_Queue&) = delete;
 
-    Deletion_Queue(Deletion_Queue&& src) : deletion_queue{move(src.deletion_queue)} {
+    Deletion_Queue(Deletion_Queue&& src) : deletion_queue(move(src.deletion_queue)) {
     }
     Deletion_Queue& operator=(Deletion_Queue&& src) {
         assert(this != &src);
@@ -137,12 +137,39 @@ struct Frame {
 
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
-    Frame(Frame&&) = default;
-    Frame& operator=(Frame&&) = default;
+
+    Frame(Frame&& src)
+        : fence(move(src.fence)), cmds(move(src.cmds)), available(move(src.available)),
+          complete(move(src.complete)), wait_for(move(src.wait_for)) {
+    }
+    Frame& operator=(Frame&& src) {
+        assert(this != &src);
+        fence = move(src.fence);
+        cmds = move(src.cmds);
+        available = move(src.available);
+        complete = move(src.complete);
+        wait_for = move(src.wait_for);
+        return *this;
+    }
 
     Fence fence;
     Commands cmds;
     Semaphore available, complete;
+
+    void wait(Sem_Ref sem) {
+        Thread::Lock lock{mutex};
+        wait_for.push(move(sem));
+    }
+    void clear() {
+        Thread::Lock lock{mutex};
+        wait_for.clear();
+    }
+    Slice<Sem_Ref> waits() {
+        return wait_for.slice();
+    }
+
+private:
+    Thread::Mutex mutex;
     Vec<Sem_Ref, Alloc> wait_for;
 };
 
@@ -185,16 +212,9 @@ struct Vk {
     void destroy_imgui();
     void recreate_swapchain();
 
+    void wait_idle();
     void begin_frame();
     void end_frame(Image_View& output);
-
-    void wait_idle();
-    void submit(Commands& cmds, u32 index, Fence& Fence);
-    void submit_and_wait(Commands cmds, u32 index);
-
-    void drop(Finalizer f);
-    Fence make_fence();
-    Commands make_commands(Queue_Family family);
 };
 
 static Opt<Vk> singleton;
@@ -329,38 +349,11 @@ void Vk::create_imgui() {
     info("[rvk] Created ImGui vulkan backend in %ms.", Profile::ms(end - start));
 }
 
-Commands Vk::make_commands(Queue_Family family) {
-    switch(family) {
-    case Queue_Family::graphics: return graphics_command_pool->make();
-    case Queue_Family::transfer: return transfer_command_pool->make();
-    case Queue_Family::compute: return compute_command_pool->make();
-    default: RPP_UNREACHABLE;
-    }
-}
-
-Fence Vk::make_fence() {
-    return Fence{device.dup()};
-}
-
-void Vk::submit(Commands& cmds, u32 index, Fence& fence) {
-    device->submit(cmds, index, fence);
-}
-
-void Vk::submit_and_wait(Commands cmds, u32 index) {
-    Fence fence{device.dup()};
-    device->submit(cmds, index, fence);
-    fence.wait();
-}
-
 void Vk::wait_idle() {
     vkDeviceWaitIdle(*device);
     for(auto& queue : deletion_queues) {
         queue.clear();
     }
-}
-
-void Vk::drop(Finalizer f) {
-    deletion_queues[state.frame_index].push(move(f));
 }
 
 void Vk::begin_frame() {
@@ -441,13 +434,12 @@ void Vk::end_frame(Image_View& output) {
                            output);
 
         // Wait for frame available before running the submit; signal frame complete on finish
-        frame.wait_for.push(
-            Sem_Ref{frame.available, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT});
+        frame.wait(Sem_Ref{frame.available, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT});
 
         auto signal = Sem_Ref{frame.complete, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT};
-        device->submit(frame.cmds, 0, Slice{&signal, 1}, frame.wait_for.slice(), frame.fence);
+        device->submit(frame.cmds, 0, Slice{&signal, 1}, frame.waits(), frame.fence);
 
-        frame.wait_for.clear();
+        frame.clear();
     }
 
     // Wait for the frame to complete before presenting
@@ -505,22 +497,6 @@ void Vk::recreate_swapchain() {
     }
 }
 
-Fence make_fence() {
-    return singleton->make_fence();
-}
-
-Commands make_commands(Queue_Family family) {
-    return singleton->make_commands(family);
-}
-
-void submit(Commands& cmds, u32 index, Fence& fence) {
-    singleton->submit(cmds, index, fence);
-}
-
-void submit_and_wait(Commands cmds, u32 index) {
-    singleton->submit_and_wait(move(cmds), index);
-}
-
 } // namespace impl
 
 bool startup(Config config) {
@@ -539,24 +515,99 @@ void shutdown() {
     info("[rvk] Completed shutdown.");
 }
 
-void drop(Finalizer f) {
-    impl::singleton->drop(move(f));
+void reset_imgui() {
+    impl::singleton->destroy_imgui();
+    impl::singleton->create_imgui();
 }
 
 void imgui() {
     impl::singleton->imgui();
 }
 
+VkExtent2D extent() {
+    return impl::singleton->swapchain->extent();
+}
+
 void begin_frame() {
     impl::singleton->begin_frame();
+}
+
+void wait_frame(Sem_Ref sem) {
+    impl::singleton->frames[impl::singleton->state.frame_index].wait(sem);
 }
 
 void end_frame(Image_View& output) {
     impl::singleton->end_frame(output);
 }
 
+u32 frame() {
+    return impl::singleton->state.frame_index;
+}
+
+u32 previous_frame() {
+    return (impl::singleton->state.frame_index + impl::singleton->state.frames_in_flight - 1) %
+           impl::singleton->state.frames_in_flight;
+}
+
+bool resized() {
+    return impl::singleton->state.resized_last_frame;
+}
+
+void drop(Finalizer f) {
+    impl::singleton->deletion_queues[impl::singleton->state.frame_index].push(move(f));
+}
+
+Fence make_fence() {
+    return Fence{impl::singleton->device.dup()};
+}
+
+Semaphore make_semaphore() {
+    return Semaphore{impl::singleton->device.dup()};
+}
+
+Commands make_commands(Queue_Family family) {
+    switch(family) {
+    case Queue_Family::graphics: return impl::singleton->graphics_command_pool->make();
+    case Queue_Family::transfer: return impl::singleton->transfer_command_pool->make();
+    case Queue_Family::compute: return impl::singleton->compute_command_pool->make();
+    default: RPP_UNREACHABLE;
+    }
+}
+
+Opt<Buffer> make_staging(u64 size) {
+    return impl::singleton->host_memory->make(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+}
+
+Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage) {
+    return impl::singleton->device_memory->make(size, usage);
+}
+
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage) {
     return impl::singleton->device_memory->make(extent, format, usage);
+}
+
+Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances) {
+    return TLAS::make(impl::singleton->device_memory.dup(), instances, n_instances);
+}
+
+Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets) {
+    return BLAS::make(impl::singleton->device_memory.dup(), geometry, move(offsets));
+}
+
+void submit(Commands& cmds, u32 index) {
+    impl::singleton->device->submit(cmds, index);
+}
+
+void submit(Commands& cmds, u32 index, Fence& fence) {
+    impl::singleton->device->submit(cmds, index, fence);
+}
+
+void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal) {
+    impl::singleton->device->submit(cmds, index, wait, signal);
+}
+
+void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal, Fence& fence) {
+    impl::singleton->device->submit(cmds, index, wait, signal, fence);
 }
 
 } // namespace rvk
