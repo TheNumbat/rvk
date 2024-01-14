@@ -22,6 +22,8 @@ set(SOURCES_RVK
     "commands.cpp"
     "pipeline.h"
     "pipeline.cpp"
+    "acceleration.cpp"
+    "acceleration.h"
     "imgui_impl_vulkan.cpp"
     "imgui_impl_vulkan.h"
 )

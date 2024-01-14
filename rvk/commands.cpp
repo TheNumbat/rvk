@@ -3,6 +3,7 @@
 
 #include "commands.h"
 #include "device.h"
+#include "memory.h"
 
 #ifdef RPP_OS_LINUX
 #include <sys/epoll.h>
@@ -127,9 +128,16 @@ Commands& Commands::operator=(Commands&& src) {
     assert(this != &src);
     this->~Commands();
     pool = move(src.pool);
+    transient_buffers = move(src.transient_buffers);
+    family_ = src.family_;
     buffer = src.buffer;
     src.buffer = null;
     return *this;
+}
+
+void Commands::attach(Buffer buf) {
+    assert(buffer);
+    transient_buffers.push(move(buf));
 }
 
 void Commands::reset() {

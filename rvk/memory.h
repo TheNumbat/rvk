@@ -33,11 +33,12 @@ struct Device_Memory {
 
     Heap_Allocator::Stats stats();
 
+    Opt<Buffer> make(u64 size, VkBufferUsageFlags usage);
     Opt<Image> make(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
 private:
-    explicit Device_Memory(const Arc<Physical_Device, Alloc>& physical_device,
-                           Arc<Device, Alloc> device, Heap location, u64 size);
+    explicit Device_Memory(Arc<Physical_Device, Alloc>& physical_device, Arc<Device, Alloc> device,
+                           Heap location, u64 size);
     friend struct Arc<Device_Memory, Alloc>;
 
     void release(Heap_Allocator::Range address);
@@ -53,6 +54,9 @@ private:
 
     friend struct Image;
     friend struct Image_View;
+    friend struct Buffer;
+    friend struct TLAS;
+    friend struct BLAS;
 };
 
 struct Image {
@@ -135,6 +139,46 @@ struct Sampler {
 private:
     Arc<Device, Alloc> device;
     VkSampler sampler = null;
+};
+
+struct Buffer {
+
+    ~Buffer();
+
+    Buffer(const Buffer& src) = delete;
+    Buffer& operator=(const Buffer& src) = delete;
+    Buffer(Buffer&& src);
+    Buffer& operator=(Buffer&& src);
+
+    u64 offset() {
+        return address ? address->offset : 0;
+    }
+    u64 length() {
+        return address ? address->length() : 0;
+    }
+    u64 gpu_address();
+
+    u8* map();
+    void write(Slice<u8> data, u64 offset = 0);
+
+    void move_from(Commands& commands, Buffer from);
+    void copy_from(Commands& commands, Buffer& from);
+    void copy_from(Commands& commands, Buffer& from, u64 offset, u64 size);
+
+    operator VkBuffer() const {
+        return buffer;
+    }
+
+private:
+    explicit Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address,
+                    VkBuffer buffer);
+
+    Arc<Device_Memory, Alloc> memory;
+
+    VkBuffer buffer = null;
+    Heap_Allocator::Range address = null;
+
+    friend struct Device_Memory;
 };
 
 } // namespace rvk::impl

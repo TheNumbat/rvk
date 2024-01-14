@@ -8,8 +8,8 @@ namespace rvk::impl {
 
 using namespace rpp;
 
-Device_Memory::Device_Memory(const Arc<Physical_Device, Alloc>& physical_device,
-                             Arc<Device, Alloc> D, Heap location, u64 heap_size)
+Device_Memory::Device_Memory(Arc<Physical_Device, Alloc>& physical_device, Arc<Device, Alloc> D,
+                             Heap location, u64 heap_size)
     : device(move(D)), location(location), allocator(heap_size) {
 
     VkMemoryAllocateFlagsInfo flags = {};
@@ -121,6 +121,47 @@ Opt<Image> Device_Memory::make(VkExtent3D extent, VkFormat format, VkImageUsageF
     RVK_CHECK(vkBindImageMemory2(*device, 1, &bind));
 
     return Opt{Image{Arc<Device_Memory, Alloc>::from_this(this), *address, image, format}};
+}
+
+Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
+
+    VkBuffer buffer = null;
+
+    VkBufferCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    info.size = size;
+    info.usage = usage;
+    info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+
+    Array<u32, 3> indices{device->queue_index(Queue_Family::graphics),
+                          device->queue_index(Queue_Family::compute),
+                          device->queue_index(Queue_Family::transfer)};
+
+    info.pQueueFamilyIndices = indices.data();
+    info.queueFamilyIndexCount = static_cast<u32>(indices.length());
+
+    RVK_CHECK(vkCreateBuffer(*device, &info, null, &buffer));
+
+    VkMemoryRequirements memory_requirements = {};
+    vkGetBufferMemoryRequirements(*device, buffer, &memory_requirements);
+
+    auto address =
+        allocator.allocate(memory_requirements.size,
+                           Math::max(memory_requirements.alignment, buffer_image_granularity));
+    if(!address) {
+        vkDestroyBuffer(*device, buffer, null);
+        return {};
+    }
+
+    VkBindBufferMemoryInfo bind = {};
+    bind.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
+    bind.memory = device_memory;
+    bind.buffer = buffer;
+    bind.memoryOffset = (*address)->offset;
+
+    RVK_CHECK(vkBindBufferMemory2(*device, 1, &bind));
+
+    return Opt{Buffer{Arc<Device_Memory, Alloc>::from_this(this), *address, buffer}};
 }
 
 Image::Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
@@ -268,6 +309,99 @@ Sampler& Sampler::operator=(Sampler&& src) {
     sampler = src.sampler;
     src.sampler = null;
     return *this;
+}
+
+Buffer::Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkBuffer buffer)
+    : memory(move(memory)), buffer(buffer), address(address) {
+}
+
+Buffer::~Buffer() {
+    if(buffer) {
+        vkDestroyBuffer(*memory->device, buffer, null);
+        memory->release(address);
+    }
+    buffer = null;
+    address = null;
+}
+
+Buffer::Buffer(Buffer&& src) {
+    *this = move(src);
+}
+
+Buffer& Buffer::operator=(Buffer&& src) {
+    assert(this != &src);
+    this->~Buffer();
+    memory = move(src.memory);
+    buffer = src.buffer;
+    src.buffer = null;
+    address = src.address;
+    src.address = null;
+    return *this;
+}
+
+u64 Buffer::gpu_address() {
+    if(!buffer) return 0;
+    VkBufferDeviceAddressInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    info.buffer = buffer;
+    return vkGetBufferDeviceAddress(*memory->device, &info);
+}
+
+u8* Buffer::map() {
+    if(buffer) {
+        if(memory->persistent_map) {
+            return memory->persistent_map + address->offset;
+        }
+    }
+    return null;
+}
+
+void Buffer::write(Slice<u8> data, u64 offset) {
+    assert(data.length() + offset <= address->length());
+    Libc::memcpy(map() + offset, data.data(), data.length());
+}
+
+void Buffer::copy_from(Commands& commands, Buffer& from) {
+    assert(from.length() <= address->length());
+
+    VkBufferCopy2 region = {};
+    region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+    region.srcOffset = 0;
+    region.dstOffset = 0;
+    region.size = from.length();
+
+    VkCopyBufferInfo2 info = {};
+    info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+    info.srcBuffer = from;
+    info.dstBuffer = buffer;
+    info.regionCount = 1;
+    info.pRegions = &region;
+
+    vkCmdCopyBuffer2(commands, &info);
+}
+
+void Buffer::copy_from(Commands& commands, Buffer& from, u64 offset, u64 size) {
+    assert(size + offset <= address->length());
+
+    VkBufferCopy2 region = {};
+    region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+    region.srcOffset = offset;
+    region.dstOffset = 0;
+    region.size = size;
+
+    VkCopyBufferInfo2 info = {};
+    info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+    info.srcBuffer = from;
+    info.dstBuffer = buffer;
+    info.regionCount = 1;
+    info.pRegions = &region;
+
+    vkCmdCopyBuffer2(commands, &info);
+}
+
+void Buffer::move_from(Commands& commands, Buffer from) {
+    copy_from(commands, from);
+    commands.attach(move(from));
 }
 
 } // namespace rvk::impl

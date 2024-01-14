@@ -81,11 +81,14 @@ struct Commands {
 
     void reset();
     void end();
+    void attach(Buffer buf);
 
 private:
     explicit Commands(Arc<Command_Pool, Alloc> pool, Queue_Family family, VkCommandBuffer buffer);
 
     Arc<Command_Pool, Alloc> pool;
+    Vec<Buffer, Alloc> transient_buffers;
+
     VkCommandBuffer buffer = null;
     Queue_Family family_ = Queue_Family::graphics;
 
