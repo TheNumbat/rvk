@@ -607,11 +607,11 @@ u32 Device::queue_index(Queue_Family family) {
 
 void Device::submit(Commands& cmds, u32 index, Fence& fence) {
 
-    VkCommandBuffer vk_cmds = cmds;
+    cmds.end();
 
     VkCommandBufferSubmitInfo cmd_info = {};
     cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-    cmd_info.commandBuffer = vk_cmds;
+    cmd_info.commandBuffer = cmds;
 
     VkSubmitInfo2 submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -627,6 +627,9 @@ void Device::submit(Commands& cmds, u32 index, Fence& fence) {
 
 void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait,
                     Fence& fence) {
+
+    cmds.end();
+
     Region(R) {
 
         Vec<VkSemaphoreSubmitInfo, Mregion<R>> vk_signal(signal.length());

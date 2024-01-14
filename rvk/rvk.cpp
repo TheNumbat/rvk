@@ -439,7 +439,6 @@ void Vk::end_frame(Image_View& output) {
         frame.cmds.reset();
         compositor->render(frame.cmds, state.frame_index, state.swapchain_index, state.has_imgui,
                            output);
-        frame.cmds.end();
 
         // Wait for frame available before running the submit; signal frame complete on finish
         frame.wait_for.push(
