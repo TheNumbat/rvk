@@ -15,17 +15,15 @@ using namespace rpp;
 
 struct Shader {
 
-    Shader() = default;
-    ~Shader();
-
     explicit Shader(Arc<Device, Alloc> device, Slice<u8> source);
+    ~Shader();
 
     Shader(const Shader&) = delete;
     Shader& operator=(const Shader&) = delete;
     Shader(Shader&& src);
     Shader& operator=(Shader&& src);
 
-    operator VkShaderModule() {
+    operator VkShaderModule() const {
         return shader;
     }
 
@@ -37,12 +35,12 @@ private:
 struct Pipeline {
     enum class Kind : u8 { graphics, compute, ray_tracing };
 
+    using Create_Info = Variant<VkGraphicsPipelineCreateInfo, VkComputePipelineCreateInfo,
+                                VkRayTracingPipelineCreateInfoKHR>;
     struct Config {
         Slice<VkPushConstantRange> push_constants;
         Slice<Descriptor_Set_Layout> descriptor_set_layouts;
-        Variant<VkGraphicsPipelineCreateInfo, VkComputePipelineCreateInfo,
-                VkRayTracingPipelineCreateInfoKHR>
-            info;
+        Create_Info info;
     };
 
     explicit Pipeline(Arc<Device, Alloc> device, Config config);
@@ -56,13 +54,14 @@ struct Pipeline {
     void bind(Commands& cmds);
     void bind_set(Commands& cmds, Descriptor_Set& set, u64 frame_index, u32 set_index = 0);
 
-    operator VkPipeline() {
+    operator VkPipeline() const {
         return pipeline;
     }
 
 private:
     Arc<Device, Alloc> device;
 
+    Kind kind = Kind::graphics;
     VkPipeline pipeline = null;
     VkPipelineLayout layout = null;
 };

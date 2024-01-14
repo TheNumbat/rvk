@@ -51,7 +51,7 @@ struct Physical_Device {
     const Properties& properties() const {
         return properties_;
     }
-    operator VkPhysicalDevice() {
+    operator VkPhysicalDevice() const {
         return device;
     }
 
@@ -106,6 +106,8 @@ struct Device {
     VkQueue queue(Queue_Family family, u32 index = 0);
 
     void submit(Commands& cmds, u32 index, Fence& fence);
+    void submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait,
+                Fence& fence);
 
     operator VkDevice() const {
         return device;

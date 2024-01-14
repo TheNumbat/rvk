@@ -21,7 +21,7 @@ struct Descriptor_Set_Layout {
     Descriptor_Set_Layout(Descriptor_Set_Layout&&);
     Descriptor_Set_Layout& operator=(Descriptor_Set_Layout&&);
 
-    operator VkDescriptorSetLayout() {
+    operator VkDescriptorSetLayout() const {
         return layout;
     }
 
@@ -62,7 +62,7 @@ struct Descriptor_Pool {
     Descriptor_Pool(Descriptor_Pool&&) = delete;
     Descriptor_Pool& operator=(Descriptor_Pool&&) = delete;
 
-    operator VkDescriptorPool() {
+    operator VkDescriptorPool() const {
         return pool;
     }
 

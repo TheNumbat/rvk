@@ -40,7 +40,7 @@ struct Instance {
 
     Arc<Physical_Device, Alloc> physical_device(VkSurfaceKHR surface, bool ray_tracing);
 
-    operator VkInstance() {
+    operator VkInstance() const {
         return instance;
     }
     VkSurfaceKHR surface() {

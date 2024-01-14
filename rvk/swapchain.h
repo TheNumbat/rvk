@@ -8,10 +8,34 @@
 
 #include "commands.h"
 #include "memory.h"
+#include "pipeline.h"
 
 namespace rvk::impl {
 
 using namespace rpp;
+
+struct Compositor {
+
+    explicit Compositor(Arc<Device, Alloc>& device, Arc<Descriptor_Pool, Alloc>& pool,
+                        Arc<Swapchain, Alloc> swapchain);
+    ~Compositor();
+
+    Compositor(const Compositor&) = delete;
+    Compositor& operator=(const Compositor&) = delete;
+    Compositor(Compositor&&) = delete;
+    Compositor& operator=(Compositor&&) = delete;
+
+    void render(Commands& cmds, u64 frame_index, u64 slot_index, bool has_imgui, Image_View& input);
+
+private:
+    Arc<Swapchain, Alloc> swapchain;
+
+    Shader v, f;
+    Descriptor_Set_Layout ds_layout;
+    Descriptor_Set ds;
+    Sampler sampler;
+    Pipeline pipeline;
+};
 
 struct Swapchain {
 
@@ -30,19 +54,26 @@ struct Swapchain {
     VkExtent2D extent() {
         return extent_;
     }
+    VkImageView view(u64 index) {
+        return slots[index].view;
+    }
     u64 slot_count() {
         return slots.length();
     }
     u32 min_image_count() {
         return min_images;
     }
+    u32 frame_count() {
+        return frames_in_flight;
+    }
 
-    operator VkSwapchainKHR() {
+    operator VkSwapchainKHR() const {
         return swapchain;
     }
 
-private:
     static VkExtent2D choose_extent(VkSurfaceCapabilitiesKHR capabilities);
+
+private:
     static VkSurfaceFormatKHR choose_format(Slice<VkSurfaceFormatKHR> formats);
     static VkPresentModeKHR choose_present_mode(Slice<VkPresentModeKHR> modes);
 
@@ -57,6 +88,7 @@ private:
     VkSwapchainKHR swapchain = null;
 
     u32 min_images = 0;
+    u32 frames_in_flight = 0;
     VkExtent2D extent_ = {};
     VkPresentModeKHR present_mode = {};
     VkSurfaceFormatKHR surface_format = {};

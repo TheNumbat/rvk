@@ -23,7 +23,7 @@ struct Fence {
     Fence(Fence&&);
     Fence& operator=(Fence&&);
 
-    operator VkFence() {
+    operator VkFence() const {
         return fence;
     }
 
@@ -35,6 +35,13 @@ struct Fence {
 private:
     Arc<Device, Alloc> device;
     VkFence fence = null;
+};
+
+struct Sem_Ref {
+    explicit Sem_Ref(Semaphore& sem, VkPipelineStageFlags2 stage = 0) : sem(sem), stage(stage) {
+    }
+    Ref<Semaphore> sem;
+    VkPipelineStageFlags2 stage;
 };
 
 struct Semaphore {
@@ -65,7 +72,7 @@ struct Commands {
     Commands(Commands&&);
     Commands& operator=(Commands&&);
 
-    operator VkCommandBuffer() {
+    operator VkCommandBuffer() const {
         return buffer;
     }
     Queue_Family family() {

@@ -16,196 +16,6 @@ using namespace rpp;
 
 namespace impl {
 
-struct Deletion_Queue {
-    using Finalizer = FunctionN<8, void()>;
-
-    explicit Deletion_Queue() = default;
-    ~Deletion_Queue() = default;
-
-    Deletion_Queue(const Deletion_Queue&) = delete;
-    Deletion_Queue& operator=(const Deletion_Queue&) = delete;
-
-    Deletion_Queue(Deletion_Queue&& src) : deletion_queue{move(src.deletion_queue)} {
-    }
-    Deletion_Queue& operator=(Deletion_Queue&& src) {
-        assert(this != &src);
-        deletion_queue = move(src.deletion_queue);
-        return *this;
-    }
-
-    void clear() {
-        Thread::Lock lock{mutex};
-        deletion_queue.clear();
-    }
-    void push(Finalizer&& finalizer) {
-        Thread::Lock lock{mutex};
-        deletion_queue.push(move(finalizer));
-    }
-
-private:
-    Thread::Mutex mutex;
-    Vec<Finalizer, Alloc> deletion_queue;
-};
-
-struct Frame {
-    explicit Frame(Arc<Device, Alloc> device,
-                   Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& graphics_command_pool)
-        : fence{device.dup()}, cmds{graphics_command_pool->make()}, available{device.dup()},
-          complete{device.dup()} {
-    }
-    ~Frame() = default;
-
-    Frame(const Frame&) = delete;
-    Frame& operator=(const Frame&) = delete;
-
-    Frame(Frame&&) = default;
-    Frame& operator=(Frame&&) = default;
-
-    Fence fence;
-    Commands cmds;
-    Semaphore available, complete;
-    Vec<Pair<Semaphore, VkShaderStageFlags>, Alloc> wait_for;
-};
-
-struct Vk {
-    Arc<Instance, Alloc> instance;
-    Arc<Debug_Callback, Alloc> debug_callback;
-    Arc<Physical_Device, Alloc> physical_device;
-    Arc<Device, Alloc> device;
-    Arc<Device_Memory, Alloc> host_memory;
-    Arc<Device_Memory, Alloc> device_memory;
-    Arc<Swapchain, Alloc> swapchain;
-    Arc<Descriptor_Pool, Alloc> descriptor_pool;
-    Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc> graphics_command_pool;
-    Arc<Command_Pool_Manager<Queue_Family::transfer>, Alloc> transfer_command_pool;
-    Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc> compute_command_pool;
-
-    Vec<Frame, Alloc> frames;
-    Vec<Deletion_Queue, Alloc> deletion_queues;
-
-    explicit Vk(Config config) {
-
-        instance =
-            Arc<Instance, Alloc>::make(move(config.swapchain_extensions), move(config.layers),
-                                       move(config.create_surface), config.validation);
-
-        debug_callback = Arc<Debug_Callback, Alloc>::make(instance.dup());
-
-        physical_device = instance->physical_device(instance->surface(), config.ray_tracing);
-
-        device = Arc<Device, Alloc>::make(physical_device.dup(), instance->surface(),
-                                          config.ray_tracing);
-
-        host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
-                                                      config.host_heap);
-
-        device_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::device,
-                                                        device->heap_size(Heap::device) -
-                                                            config.device_heap_margin);
-
-        descriptor_pool = Arc<Descriptor_Pool, Alloc>::make(
-            device.dup(), config.descriptors_per_type, config.ray_tracing);
-
-        graphics_command_pool =
-            Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>::make(device.dup());
-
-        transfer_command_pool =
-            Arc<Command_Pool_Manager<Queue_Family::transfer>, Alloc>::make(device.dup());
-
-        compute_command_pool =
-            Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc>::make(device.dup());
-
-        { // Create per-frame resources
-            Profile::Time_Point start = Profile::timestamp();
-
-            frames.reserve(config.frames_in_flight);
-            for(u32 i = 0; i < config.frames_in_flight; i++) {
-                frames.emplace(device.dup(), graphics_command_pool);
-                deletion_queues.emplace();
-            }
-
-            Profile::Time_Point end = Profile::timestamp();
-            info("Created resources for % frame(s) in %ms.", config.frames_in_flight,
-                 Profile::ms(end - start));
-        }
-
-        sync([&](Commands& cmds) {
-            swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
-                                                    instance->surface(), config.frames_in_flight);
-        });
-
-        { // Initialize ImGui
-            Profile::Time_Point start = Profile::timestamp();
-
-            ImGui_ImplVulkan_InitInfo init = {};
-            init.Instance = *instance;
-            init.PhysicalDevice = *physical_device;
-            init.Device = *device;
-            init.QueueFamily = *physical_device->queue_index(Queue_Family::graphics);
-            init.Queue = device->queue(Queue_Family::graphics);
-            init.DescriptorPool = *descriptor_pool;
-            init.MinImageCount = swapchain->min_image_count();
-            init.CheckVkResultFn = check;
-            init.UseDynamicRendering = true;
-            init.ColorAttachmentFormat = swapchain->format();
-
-            // The ImGui Vulkan backend will create resources for this many frames.
-            init.ImageCount = Math::max(config.frames_in_flight, swapchain->min_image_count());
-
-            if(!ImGui_ImplVulkan_Init(&init, null)) {
-                die("[rvk] Failed to initialize ImGui vulkan backend!");
-            }
-
-            Profile::Time_Point end = Profile::timestamp();
-            info("[rvk] Created ImGui vulkan backend in %ms.", Profile::ms(end - start));
-        }
-    }
-
-    ~Vk() {
-        wait_idle();
-        ImGui_ImplVulkan_Shutdown();
-    }
-
-    Commands make_commands(Queue_Family family) {
-        switch(family) {
-        case Queue_Family::graphics: return graphics_command_pool->make();
-        case Queue_Family::transfer: return transfer_command_pool->make();
-        case Queue_Family::compute: return compute_command_pool->make();
-        default: RPP_UNREACHABLE;
-        }
-    }
-
-    void submit_and_wait(Commands cmds, u32 index) {
-        Fence fence{device.dup()};
-        device->submit(cmds, index, fence);
-        fence.wait();
-    }
-
-    void wait_idle() {
-        vkDeviceWaitIdle(*device);
-        for(auto& queue : deletion_queues) {
-            queue.clear();
-        }
-    }
-
-    template<typename F>
-        requires Invocable<F, Commands&>
-    auto sync(F&& f, Queue_Family family = Queue_Family::graphics, u32 index = 0)
-        -> Invoke_Result<F, Commands&> {
-        Commands cmds = make_commands(family);
-        if constexpr(Same<Invoke_Result<F, Commands&>, void>) {
-            f(cmds);
-            cmds.end();
-            submit_and_wait(move(cmds), index);
-        } else {
-            auto result = f(cmds);
-            cmds.end();
-            submit_and_wait(move(cmds), index);
-            return result;
-        }
-    }
-};
-
 void check(VkResult result) {
     RVK_CHECK(result);
 }
@@ -287,17 +97,407 @@ String_View describe(VkResult result) {
     }
 }
 
-using ImGui_Alloc = Mallocator<"ImGui">;
+struct Deletion_Queue {
+    using Finalizer = FunctionN<8, void()>;
 
-static void* imgui_alloc(u64 sz, void*) {
-    return ImGui_Alloc::alloc(sz);
-}
+    explicit Deletion_Queue() = default;
+    ~Deletion_Queue() = default;
 
-static void imgui_free(void* mem, void*) {
-    ImGui_Alloc::free(mem);
-}
+    Deletion_Queue(const Deletion_Queue&) = delete;
+    Deletion_Queue& operator=(const Deletion_Queue&) = delete;
+
+    Deletion_Queue(Deletion_Queue&& src) : deletion_queue{move(src.deletion_queue)} {
+    }
+    Deletion_Queue& operator=(Deletion_Queue&& src) {
+        assert(this != &src);
+        deletion_queue = move(src.deletion_queue);
+        return *this;
+    }
+
+    void clear() {
+        Thread::Lock lock{mutex};
+        deletion_queue.clear();
+    }
+    void push(Finalizer&& finalizer) {
+        Thread::Lock lock{mutex};
+        deletion_queue.push(move(finalizer));
+    }
+
+private:
+    Thread::Mutex mutex;
+    Vec<Finalizer, Alloc> deletion_queue;
+};
+
+struct Frame {
+    explicit Frame(Arc<Device, Alloc> device,
+                   Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& graphics_command_pool)
+        : fence{device.dup()}, cmds{graphics_command_pool->make()}, available{device.dup()},
+          complete{device.dup()} {
+    }
+    ~Frame() = default;
+
+    Frame(const Frame&) = delete;
+    Frame& operator=(const Frame&) = delete;
+    Frame(Frame&&) = default;
+    Frame& operator=(Frame&&) = default;
+
+    Fence fence;
+    Commands cmds;
+    Semaphore available, complete;
+    Vec<Sem_Ref, Alloc> wait_for;
+};
+
+struct Vk {
+    Arc<Instance, Alloc> instance;
+    Arc<Debug_Callback, Alloc> debug_callback;
+    Arc<Physical_Device, Alloc> physical_device;
+    Arc<Device, Alloc> device;
+    Arc<Device_Memory, Alloc> host_memory;
+    Arc<Device_Memory, Alloc> device_memory;
+    Arc<Swapchain, Alloc> swapchain;
+    Arc<Descriptor_Pool, Alloc> descriptor_pool;
+    Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc> graphics_command_pool;
+    Arc<Command_Pool_Manager<Queue_Family::transfer>, Alloc> transfer_command_pool;
+    Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc> compute_command_pool;
+    Arc<Compositor, Alloc> compositor;
+
+    Vec<Frame, Alloc> frames;
+    Vec<Deletion_Queue, Alloc> deletion_queues;
+
+    struct State {
+        bool has_imgui = false;
+        bool resized_last_frame = false;
+        bool minimized = false;
+        u32 frames_in_flight = 0;
+        u32 frame_index = 0;
+        u32 swapchain_index = 0;
+
+        void advance() {
+            frame_index = (frame_index + 1) % frames_in_flight;
+        }
+    };
+    State state;
+
+    explicit Vk(Config config);
+    ~Vk();
+
+    void wait_idle();
+    void submit_and_wait(Commands cmds, u32 index);
+    Commands make_commands(Queue_Family family);
+
+    void imgui();
+    void create_imgui();
+    void destroy_imgui();
+    void recreate_swapchain();
+
+    void begin_frame();
+    void end_frame(Image_View& output);
+};
 
 static Opt<Vk> singleton;
+
+Vk::Vk(Config config) {
+
+    state.has_imgui = config.imgui;
+    state.frames_in_flight = config.frames_in_flight;
+
+    instance = Arc<Instance, Alloc>::make(move(config.swapchain_extensions), move(config.layers),
+                                          move(config.create_surface), config.validation);
+
+    debug_callback = Arc<Debug_Callback, Alloc>::make(instance.dup());
+
+    physical_device = instance->physical_device(instance->surface(), config.ray_tracing);
+
+    device =
+        Arc<Device, Alloc>::make(physical_device.dup(), instance->surface(), config.ray_tracing);
+
+    host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
+                                                  config.host_heap);
+
+    device_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::device,
+                                                    device->heap_size(Heap::device) -
+                                                        config.device_heap_margin);
+
+    descriptor_pool = Arc<Descriptor_Pool, Alloc>::make(device.dup(), config.descriptors_per_type,
+                                                        config.ray_tracing);
+
+    graphics_command_pool =
+        Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>::make(device.dup());
+
+    transfer_command_pool =
+        Arc<Command_Pool_Manager<Queue_Family::transfer>, Alloc>::make(device.dup());
+
+    compute_command_pool =
+        Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc>::make(device.dup());
+
+    { // Create per-frame resources
+        Profile::Time_Point start = Profile::timestamp();
+
+        frames.reserve(config.frames_in_flight);
+        for(u32 i = 0; i < config.frames_in_flight; i++) {
+            frames.emplace(device.dup(), graphics_command_pool);
+            deletion_queues.emplace();
+        }
+
+        Profile::Time_Point end = Profile::timestamp();
+        info("Created resources for % frame(s) in %ms.", config.frames_in_flight,
+             Profile::ms(end - start));
+    }
+
+    sync([&](Commands& cmds) {
+        swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
+                                                instance->surface(), config.frames_in_flight);
+    });
+
+    compositor = Arc<Compositor, Alloc>::make(device, descriptor_pool, swapchain.dup());
+
+    create_imgui();
+}
+
+Vk::~Vk() {
+    wait_idle();
+    destroy_imgui();
+}
+
+void Vk::imgui() {
+    if(!state.has_imgui) return;
+
+    using namespace ImGui;
+
+    Begin("rvk info");
+    Text("Frame: %u | Image: %u", state.frame_index, state.swapchain_index);
+    Text("Swapchain images: %u | Max frames: %u", swapchain->slot_count(), state.frames_in_flight);
+    Text("Extent: %ux%u", swapchain->extent().width, swapchain->extent().height);
+
+    if(TreeNodeEx("Device Heap", ImGuiTreeNodeFlags_DefaultOpen)) {
+        device_memory->imgui();
+        TreePop();
+    }
+    if(TreeNodeEx("Host Heap", ImGuiTreeNodeFlags_DefaultOpen)) {
+        host_memory->imgui();
+        TreePop();
+    }
+    if(TreeNode("Device")) {
+        device->imgui();
+        TreePop();
+    }
+    if(TreeNode("Physical Device")) {
+        physical_device->imgui();
+        TreePop();
+    }
+    if(TreeNode("Instance")) {
+        instance->imgui();
+        TreePop();
+    }
+    End();
+}
+
+void Vk::destroy_imgui() {
+    if(!state.has_imgui) return;
+
+    ImGui_ImplVulkan_Shutdown();
+}
+
+void Vk::create_imgui() {
+    if(!state.has_imgui) return;
+
+    Profile::Time_Point start = Profile::timestamp();
+
+    ImGui_ImplVulkan_InitInfo init = {};
+    init.Instance = *instance;
+    init.PhysicalDevice = *physical_device;
+    init.Device = *device;
+    init.QueueFamily = *physical_device->queue_index(Queue_Family::graphics);
+    init.Queue = device->queue(Queue_Family::graphics);
+    init.DescriptorPool = *descriptor_pool;
+    init.MinImageCount = swapchain->min_image_count();
+    init.CheckVkResultFn = check;
+    init.UseDynamicRendering = true;
+    init.ColorAttachmentFormat = swapchain->format();
+
+    // The ImGui Vulkan backend will create resources for this many frames.
+    init.ImageCount = Math::max(state.frames_in_flight, swapchain->min_image_count());
+
+    if(!ImGui_ImplVulkan_Init(&init, null)) {
+        die("[rvk] Failed to initialize ImGui vulkan backend!");
+    }
+
+    Profile::Time_Point end = Profile::timestamp();
+    info("[rvk] Created ImGui vulkan backend in %ms.", Profile::ms(end - start));
+}
+
+Commands Vk::make_commands(Queue_Family family) {
+    switch(family) {
+    case Queue_Family::graphics: return graphics_command_pool->make();
+    case Queue_Family::transfer: return transfer_command_pool->make();
+    case Queue_Family::compute: return compute_command_pool->make();
+    default: RPP_UNREACHABLE;
+    }
+}
+
+void Vk::submit_and_wait(Commands cmds, u32 index) {
+    Fence fence{device.dup()};
+    device->submit(cmds, index, fence);
+    fence.wait();
+}
+
+void Vk::wait_idle() {
+    vkDeviceWaitIdle(*device);
+    for(auto& queue : deletion_queues) {
+        queue.clear();
+    }
+}
+
+void Vk::begin_frame() {
+
+    state.resized_last_frame = false;
+
+    // If we wrapped all the way around the in flight frames and got to a frame that
+    // is still executing, wait for it to finish so we can free/reuse its resources.
+    Trace("Wait for frame slot") {
+        frames[state.frame_index].fence.wait();
+    }
+
+    // Erase resources dropped while this frame was in flight
+    Trace("Erase dropped resources") {
+        deletion_queues[state.frame_index].clear();
+    }
+
+    if(state.minimized) return;
+
+    // Get next swapchain image. This will return immediately with the index of the
+    // next swapchain image that we will use. When that image is actually ready,
+    // it will signal frame.avail, which triggers our frame commands. The image
+    // is not considered available until the present to it completes, so there is an
+    // implicit sync between here and vkQueuePresentKHR in end_frame.
+    // Total frame syncs:
+    //  frame fence --> user commands -|barrier
+    //                                 v
+    //         img acq -frame.avail->  x  -frame.finish-> presentation -implicit-> img acq
+    VkResult result;
+    Trace("Acquire next image") {
+        result = vkAcquireNextImageKHR(*device, *swapchain, UINT64_MAX,
+                                       frames[state.frame_index].available, null,
+                                       &state.swapchain_index);
+    }
+
+    // Out of date if a resize is required
+    if(result == VK_ERROR_OUT_OF_DATE_KHR) {
+        info("[rvk] Swapchain out of date, recreating...");
+        recreate_swapchain();
+    } else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        die("[rvk] Failed to acquire next image: %", describe(result));
+    }
+
+    // Previously, we waited for the complete fence of the frame currently
+    // using this swapchain image. However, was unecessary because
+    // we do not start rendering to the swapchain image until we get the frame.available
+    // semaphore signal, which indicates that the other frame must have presented.
+    // In the meantime, we can use this frame's resources to start rendering this frame,
+    // and only wait for the previous slot occupant once we're ready to composite.
+    // TLDR: having a compositor means the main frame parallelism isn't limited by
+    // the number of swapchain slots. Only the compositing commands have to wait
+    // for the frame to actually be available; the main frame can start rendering
+    // to its exclusive resources whenever the previous usage of this slot is done.
+
+    if(state.has_imgui) {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui::NewFrame();
+    }
+}
+
+void Vk::end_frame(Image_View& output) {
+
+    if(state.has_imgui) ImGui::EndFrame();
+
+    // While minimized, check if we are no longer minimized
+    if(state.minimized) {
+        recreate_swapchain();
+        return;
+    }
+
+    Frame& frame = frames[state.frame_index];
+
+    // Send frame to GPU queues
+    {
+        // Set up primary compositing command buffer
+        frame.cmds.reset();
+        compositor->render(frame.cmds, state.frame_index, state.swapchain_index, state.has_imgui,
+                           output);
+        frame.cmds.end();
+
+        // Wait for frame available before running the submit; signal frame complete on finish
+        frame.wait_for.push(
+            Sem_Ref{frame.available, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT});
+
+        auto signal = Sem_Ref{frame.complete, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT};
+        device->submit(frame.cmds, 0, Slice{&signal, 1}, frame.wait_for.slice(), frame.fence);
+
+        frame.wait_for.clear();
+    }
+
+    // Wait for the frame to complete before presenting
+    VkSemaphore complete = frame.complete;
+    VkSwapchainKHR vk_swapchain = *swapchain;
+
+    VkPresentInfoKHR present_info = {};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &complete;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &vk_swapchain;
+    present_info.pImageIndices = &state.swapchain_index;
+
+    // Submit presentation command
+    VkResult result = vkQueuePresentKHR(device->queue(Queue_Family::present), &present_info);
+    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        recreate_swapchain();
+    } else if(result != VK_SUCCESS) {
+        die("[rvk] Failed to present swapchain image: %", describe(result));
+    }
+
+    // Circular increment of in-flight frame index
+    state.advance();
+}
+
+void Vk::recreate_swapchain() {
+
+    VkExtent2D ext = Swapchain::choose_extent(physical_device->capabilities(instance->surface()));
+
+    state.minimized = ext.width == 0 && ext.height == 0;
+    if(state.minimized) return;
+
+    info("[rvk] Recreating swapchain...");
+    Log_Indent {
+        Profile::Time_Point start = Profile::timestamp();
+
+        wait_idle();
+        destroy_imgui();
+        compositor = {};
+
+        sync([&](Commands& cmds) {
+            swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
+                                                    instance->surface(), state.frames_in_flight);
+        });
+
+        compositor = Arc<Compositor, Alloc>::make(device, descriptor_pool, swapchain.dup());
+
+        create_imgui();
+
+        state.resized_last_frame = true;
+
+        Profile::Time_Point end = Profile::timestamp();
+        info("[rvk] Recreated swapchain in %ms.", Profile::ms(end - start));
+    }
+}
+
+Commands make_commands(Queue_Family family) {
+    return singleton->make_commands(family);
+}
+
+void submit_and_wait(Commands cmds, u32 index) {
+    singleton->submit_and_wait(move(cmds), index);
+}
 
 } // namespace impl
 
@@ -306,12 +506,7 @@ bool startup(Config config) {
         die("[rvk] Already started up!");
     }
     Profile::Time_Point start = Profile::timestamp();
-
-    ImGui::SetAllocatorFunctions(impl::imgui_alloc, impl::imgui_free);
-    ImGui::CreateContext();
-
     impl::singleton.emplace(move(config));
-
     Profile::Time_Point end = Profile::timestamp();
     info("[rvk] Completed startup in %ms.", Profile::ms(end - start));
     return true;
@@ -319,8 +514,23 @@ bool startup(Config config) {
 
 void shutdown() {
     impl::singleton.clear();
-    ImGui::DestroyContext();
     info("[rvk] Completed shutdown.");
+}
+
+void imgui() {
+    impl::singleton->imgui();
+}
+
+void begin_frame() {
+    impl::singleton->begin_frame();
+}
+
+void end_frame(Image_View& output) {
+    impl::singleton->end_frame(output);
+}
+
+Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage) {
+    return impl::singleton->device_memory->make(extent, format, usage);
 }
 
 } // namespace rvk

@@ -1,8 +1,8 @@
 
 #include <imgui/imgui.h>
 
-#include "memory.h"
 #include "commands.h"
+#include "memory.h"
 
 namespace rvk::impl {
 
@@ -48,6 +48,15 @@ Device_Memory::~Device_Memory() {
     }
     persistent_map = null;
     device_memory = null;
+}
+
+void Device_Memory::imgui() {
+    using namespace ImGui;
+    auto stat = stats();
+    Text("Alloc: %lumb | Free: %lumb | High: %lumb", stat.allocated_size / Math::MB(1),
+         stat.free_size / Math::MB(1), stat.high_water / Math::MB(1));
+    Text("Alloc Blocks: %lu | Free Blocks: %lu", stat.allocated_blocks, stat.free_blocks);
+    Text("Capacity: %lumb", stat.total_capacity / Math::MB(1));
 }
 
 typename Heap_Allocator::Stats Device_Memory::stats() {
@@ -222,6 +231,41 @@ Image_View& Image_View::operator=(Image_View&& src) {
     src.view = null;
     aspect_mask = src.aspect_mask;
     src.aspect_mask = 0;
+    return *this;
+}
+
+Sampler::Sampler(Arc<Device, Alloc> D, VkFilter min, VkFilter mag) : device(move(D)) {
+
+    VkSamplerCreateInfo sample_info = {};
+    sample_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sample_info.minFilter = min;
+    sample_info.magFilter = mag;
+    sample_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sample_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sample_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sample_info.unnormalizedCoordinates = VK_FALSE;
+    sample_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sample_info.minLod = 0.0f;
+    sample_info.maxLod = VK_LOD_CLAMP_NONE;
+
+    RVK_CHECK(vkCreateSampler(*device, &sample_info, null, &sampler));
+}
+
+Sampler::~Sampler() {
+    if(sampler) vkDestroySampler(*device, sampler, null);
+    sampler = null;
+}
+
+Sampler::Sampler(Sampler&& src) {
+    *this = move(src);
+}
+
+Sampler& Sampler::operator=(Sampler&& src) {
+    assert(this != &src);
+    this->~Sampler();
+    device = move(src.device);
+    sampler = src.sampler;
+    src.sampler = null;
     return *this;
 }
 

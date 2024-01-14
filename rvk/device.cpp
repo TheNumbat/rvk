@@ -461,6 +461,10 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
 
                 RVK_CHECK(vkCreateDevice(*physical_device, &dev_info, null, &device));
             }
+
+            for(auto& ext : vk_extensions) {
+                enabled_extensions.push(String_View{ext}.string<Alloc>());
+            }
         }
 
         // Get queues
@@ -613,10 +617,52 @@ void Device::submit(Commands& cmds, u32 index, Fence& fence) {
     submit_info.commandBufferInfoCount = 1;
     submit_info.pCommandBufferInfos = &cmd_info;
 
-    Thread::Lock lock(mutex);
-
     fence.reset();
-    RVK_CHECK(vkQueueSubmit2(queue(cmds.family(), index), 1, &submit_info, fence));
+    {
+        Thread::Lock lock(mutex);
+        RVK_CHECK(vkQueueSubmit2(queue(cmds.family(), index), 1, &submit_info, fence));
+    }
+}
+
+void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait,
+                    Fence& fence) {
+    Region(R) {
+
+        Vec<VkSemaphoreSubmitInfo, Mregion<R>> vk_signal(signal.length());
+        Vec<VkSemaphoreSubmitInfo, Mregion<R>> vk_wait(wait.length());
+
+        for(u64 i = 0; i < signal.length(); i++) {
+            VkSemaphoreSubmitInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            info.semaphore = *signal[i].sem;
+            vk_signal.push(info);
+        }
+        for(u64 i = 0; i < wait.length(); i++) {
+            VkSemaphoreSubmitInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            info.semaphore = *wait[i].sem;
+            vk_wait.push(info);
+        }
+
+        VkCommandBufferSubmitInfo cmd_info = {};
+        cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        cmd_info.commandBuffer = cmds;
+
+        VkSubmitInfo2 submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        submit_info.commandBufferInfoCount = 1;
+        submit_info.pCommandBufferInfos = &cmd_info;
+        submit_info.signalSemaphoreInfoCount = static_cast<u32>(vk_signal.length());
+        submit_info.pSignalSemaphoreInfos = vk_signal.data();
+        submit_info.waitSemaphoreInfoCount = static_cast<u32>(vk_wait.length());
+        submit_info.pWaitSemaphoreInfos = vk_wait.data();
+
+        fence.reset();
+        {
+            Thread::Lock lock(mutex);
+            RVK_CHECK(vkQueueSubmit2(queue(cmds.family(), index), 1, &submit_info, fence));
+        }
+    }
 }
 
 void Device::imgui() {

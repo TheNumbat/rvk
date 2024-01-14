@@ -25,7 +25,9 @@ struct Device_Memory {
     Device_Memory(Device_Memory&&) = delete;
     Device_Memory& operator=(Device_Memory&&) = delete;
 
-    operator VkDeviceMemory() {
+    void imgui();
+
+    operator VkDeviceMemory() const {
         return device_memory;
     }
 
@@ -62,7 +64,7 @@ struct Image {
     Image(Image&& src);
     Image& operator=(Image&& src);
 
-    operator VkImage() {
+    operator VkImage() const {
         return image;
     }
     VkFormat format() {
@@ -102,7 +104,7 @@ struct Image_View {
     Image_View(Image_View&& src);
     Image_View& operator=(Image_View&& src);
 
-    operator VkImageView() {
+    operator VkImageView() const {
         return view;
     }
     VkImageAspectFlags aspect() {
@@ -114,6 +116,25 @@ private:
 
     VkImageView view = null;
     VkImageAspectFlags aspect_mask = 0;
+};
+
+struct Sampler {
+
+    explicit Sampler(Arc<Device, Alloc> device, VkFilter min, VkFilter mag);
+    ~Sampler();
+
+    Sampler(const Sampler& src) = delete;
+    Sampler& operator=(const Sampler& src) = delete;
+    Sampler(Sampler&& src);
+    Sampler& operator=(Sampler&& src);
+
+    operator VkSampler() const {
+        return sampler;
+    }
+
+private:
+    Arc<Device, Alloc> device;
+    VkSampler sampler = null;
 };
 
 } // namespace rvk::impl

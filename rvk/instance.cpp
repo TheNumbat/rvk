@@ -213,11 +213,11 @@ void Instance::imgui() {
         TreePop();
     }
     if(TreeNode("Enabled Extensions")) {
-        for(auto& ext : enabled_extensions) Text("%*.s", ext.length(), ext.data());
+        for(auto& ext : enabled_extensions) Text("%.*s", ext.length(), ext.data());
         TreePop();
     }
     if(TreeNode("Enabled Layers")) {
-        for(auto& layer : enabled_layers) Text("%*.s", layer.length(), layer.data());
+        for(auto& layer : enabled_layers) Text("%.*s", layer.length(), layer.data());
         TreePop();
     }
 }

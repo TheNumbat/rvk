@@ -14,6 +14,7 @@ It includes the following features:
 - Async GPU tasks for coroutines
 - Swapchain management and compositor
 - Validation layer config and debug messaging
+- Shader hot reloading
 - Graphics, compute, and transfer queue management
 - Multithreaded command pool management
 - Compile-time descriptor set layout specifications
@@ -73,3 +74,11 @@ make -j
 ```
 
 For faster parallel builds, you can instead generate [ninja](https://ninja-build.org/) build files with `cmake -G Ninja ..`.
+
+# ToDo
+
+Finish porting
+- [ ] shader hot reloading
+- [ ] descriptor gen
+- [ ] drop
+- [ ] accelerations structures

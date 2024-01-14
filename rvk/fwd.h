@@ -39,11 +39,16 @@ struct Descriptor_Set;
 struct Descriptor_Pool;
 struct Fence;
 struct Semaphore;
+struct Sem_Ref;
 struct Commands;
 struct Command_Pool;
 template<Queue_Family F>
 struct Command_Pool_Manager;
+struct Pipeline;
+struct Shader;
+struct Sampler;
 struct Swapchain;
+struct Compositor;
 
 String_View describe(VkResult result);
 String_View describe(VkObjectType object);
