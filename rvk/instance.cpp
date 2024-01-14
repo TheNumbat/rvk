@@ -58,14 +58,22 @@ static VkBool32 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT sev,
     return is_error;
 }
 
+Slice<const char*> Instance::baseline_extensions() {
+    static Array<const char*, 1> instance{
+        reinterpret_cast<const char*>(VK_EXT_DEBUG_UTILS_EXTENSION_NAME),
+    };
+    return Slice<const char*>{instance};
+}
+
 Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers, bool validation) {
 
     Profile::Time_Point start = Profile::timestamp();
 
     info("[rvk] Creating instance...");
-    Log_Indent Region(R) {
 
-        RVK_CHECK(volkInitialize());
+    RVK_CHECK(volkInitialize());
+
+    Log_Indent Region(R) {
 
         VkApplicationInfo app_info = {};
         app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -79,8 +87,9 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers, boo
         for(auto& ext : extensions) {
             extension_names.push(reinterpret_cast<const char*>(ext.terminate<Mregion<R>>().data()));
         }
-
-        extension_names.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        for(auto& required : baseline_extensions()) {
+            extension_names.push(required);
+        }
 
         check_extensions(extension_names.slice());
 
@@ -200,8 +209,7 @@ void Instance::imgui() {
     }
 }
 
-Arc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensions,
-                                                      VkSurfaceKHR surface) {
+Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool ray_tracing) {
     Region(R) {
 
         u32 n_devices = 0;
@@ -250,15 +258,30 @@ Arc<Physical_Device, Alloc> Instance::physical_device(Slice<String_View> extensi
                 }
 
                 bool supported = true;
-                for(auto& extension : extensions) {
-                    if(device->supports_extension(extension)) {
-                        info("[rvk] Found required device extension: %", String_View{extension});
+
+                for(auto& extension : Device::baseline_extensions()) {
+                    if(device->supports_extension(String_View{extension})) {
+                        info("[rvk] Found device extension: %", String_View{extension});
                     } else {
-                        info("[rvk] Device does not support required extension %", extension);
+                        info("[rvk] Device does not support extension %", extension);
                         supported = false;
                         break;
                     }
                 }
+                if(ray_tracing) {
+                    for(auto& extension : Device::ray_tracing_extensions()) {
+                        if(device->supports_extension(String_View{extension})) {
+                            info("[rvk] Found device ray tracing extension: %",
+                                 String_View{extension});
+                        } else {
+                            info("[rvk] Device does not support ray tracing extension %",
+                                 extension);
+                            supported = false;
+                            break;
+                        }
+                    }
+                }
+
                 if(!supported) continue;
 
                 info("[rvk] Device is supported.");

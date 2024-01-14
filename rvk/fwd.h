@@ -31,6 +31,7 @@ struct Instance;
 struct Debug_Callback;
 struct Physical_Device;
 struct Device;
+struct Device_Memory;
 
 struct Image;
 struct Image_View;

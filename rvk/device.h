@@ -81,8 +81,8 @@ private:
 
 struct Device {
 
-    explicit Device(Arc<Physical_Device, Alloc> physical_device, Slice<String_View> extensions,
-                    VkPhysicalDeviceFeatures2& features, VkSurfaceKHR surface);
+    explicit Device(Arc<Physical_Device, Alloc> physical_device, VkSurfaceKHR surface,
+                    bool ray_tracing);
     ~Device();
 
     Device(const Device&) = delete;
@@ -106,6 +106,9 @@ struct Device {
     operator VkDevice() const {
         return device;
     }
+
+    static Slice<const char*> baseline_extensions();
+    static Slice<const char*> ray_tracing_extensions();
 
 private:
     Arc<Physical_Device, Alloc> physical_device;

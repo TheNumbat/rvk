@@ -3,6 +3,7 @@
 
 #include "device.h"
 #include "instance.h"
+#include "memory.h"
 #include "rvk.h"
 
 namespace rvk {
@@ -16,22 +17,30 @@ struct Vk {
     Arc<Debug_Callback, Alloc> debug_callback;
     Arc<Physical_Device, Alloc> physical_device;
     Arc<Device, Alloc> device;
+    Arc<Device_Memory, Alloc> host_memory;
+    Arc<Device_Memory, Alloc> device_memory;
 
     VkSurfaceKHR surface;
 
     explicit Vk(Config config) {
 
-        instance = Arc<Instance, Alloc>{move(config.instance_extensions), move(config.layers),
+        instance = Arc<Instance, Alloc>{move(config.swapchain_extensions), move(config.layers),
                                         config.validation};
 
         debug_callback = Arc<Debug_Callback, Alloc>{instance.dup()};
 
         surface = config.create_surface(*instance);
 
-        physical_device = instance->physical_device(config.device_extensions, surface);
+        physical_device = instance->physical_device(surface, config.ray_tracing);
 
-        device = Arc<Device, Alloc>{physical_device.dup(), config.device_extensions,
-                                    config.device_features, surface};
+        device = Arc<Device, Alloc>{physical_device.dup(), surface, config.ray_tracing};
+
+        host_memory = Arc<Device_Memory, Alloc>{physical_device, device.dup(), Heap::host,
+                                                config.staging_heap};
+
+        device_memory =
+            Arc<Device_Memory, Alloc>{physical_device, device.dup(), Heap::device,
+                                      device->heap_size(Heap::device) - config.device_heap_margin};
     }
 
     ~Vk() {
