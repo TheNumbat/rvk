@@ -1,6 +1,7 @@
 
 #include <imgui/imgui.h>
 
+#include "commands.h"
 #include "device.h"
 
 static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
@@ -597,6 +598,25 @@ u32 Device::queue_index(Queue_Family family) {
     case Queue_Family::present: return present_family_index;
     default: RPP_UNREACHABLE;
     }
+}
+
+void Device::submit(Commands& cmds, u32 index, Fence& fence) {
+
+    VkCommandBuffer vk_cmds = cmds;
+
+    VkCommandBufferSubmitInfo cmd_info = {};
+    cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    cmd_info.commandBuffer = vk_cmds;
+
+    VkSubmitInfo2 submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submit_info.commandBufferInfoCount = 1;
+    submit_info.pCommandBufferInfos = &cmd_info;
+
+    Thread::Lock lock(mutex);
+
+    fence.reset();
+    RVK_CHECK(vkQueueSubmit2(queue(cmds.family(), index), 1, &submit_info, fence));
 }
 
 void Device::imgui() {

@@ -69,6 +69,14 @@ struct Image {
         return format_;
     }
 
+    Image_View view(VkImageAspectFlags aspect);
+
+    void setup(Commands& commands, VkImageLayout layout);
+    void transition(Commands& commands, VkImageAspectFlags aspect, VkImageLayout src_layout,
+                    VkImageLayout dst_layout, VkPipelineStageFlags2 src_stage,
+                    VkPipelineStageFlags2 dst_stage, VkAccessFlags2 src_access,
+                    VkAccessFlags2 dst_access);
+
 private:
     explicit Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
                    VkFormat format);
@@ -81,6 +89,7 @@ private:
 
     friend struct Device_Memory;
     friend struct Image_View;
+    friend struct Swapchain;
 };
 
 struct Image_View {

@@ -44,9 +44,9 @@ set(RVK_HAS_RPP TRUE)
 
 Alternatively, to start an rvk project from scratch, you can fork [rpp_example_project/rvk](https://github.com/TheNumbat/rpp_example_project/tree/rvk).
 
-## Build and Run Tests
+## Build
 
-To build rvk and run the tests, run the following commands:
+To build rvk on its own, run the following commands:
 
 ### Windows
 
@@ -56,8 +56,7 @@ Assure MSVC 19.37 and cmake 3.17 (or newer) are installed and in your PATH.
 mkdir build
 cd build
 cmake ..
-cmake --build . -DRVK_TEST=ON
-ctest -C Debug
+cmake --build .
 ```
 
 For faster parallel builds, you can instead generate [ninja](https://ninja-build.org/) build files with `cmake -G Ninja ..`.
@@ -71,7 +70,6 @@ mkdir build
 cd build
 CXX=clang++-17 cmake .. -DRVK_TEST=ON
 make -j
-ctest -C Debug
 ```
 
 For faster parallel builds, you can instead generate [ninja](https://ninja-build.org/) build files with `cmake -G Ninja ..`.

@@ -12,7 +12,8 @@ set(SOURCES_IMGUI
     "imgui_widgets.cpp"
     "imstb_textedit.h"
     "imstb_rectpack.h"
-    "imstb_truetype.h")
+    "imstb_truetype.h"
+)
 
 add_library(ImGui STATIC ${SOURCES_IMGUI})
 

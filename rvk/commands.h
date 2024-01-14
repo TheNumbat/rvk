@@ -7,6 +7,8 @@
 
 #include "fwd.h"
 
+#include "device.h"
+
 namespace rvk::impl {
 
 using namespace rpp;
@@ -63,18 +65,22 @@ struct Commands {
     Commands(Commands&&);
     Commands& operator=(Commands&&);
 
-    operator VkCommandBuffer() const {
+    operator VkCommandBuffer() {
         return buffer;
+    }
+    Queue_Family family() {
+        return family_;
     }
 
     void reset();
     void end();
 
 private:
-    explicit Commands(Arc<Command_Pool, Alloc> pool, VkCommandBuffer buffer);
+    explicit Commands(Arc<Command_Pool, Alloc> pool, Queue_Family family, VkCommandBuffer buffer);
 
     Arc<Command_Pool, Alloc> pool;
     VkCommandBuffer buffer = null;
+    Queue_Family family_ = Queue_Family::graphics;
 
     friend struct Command_Pool;
 };
@@ -89,8 +95,8 @@ struct Command_Pool {
     Command_Pool& operator=(Command_Pool&& src) = delete;
 
 private:
-    explicit Command_Pool(Arc<Device, Alloc> device, VkCommandPool pool);
-    friend struct Arc<Command_Pool, Alloc>;
+    explicit Command_Pool(Arc<Device, Alloc> device, Queue_Family family, VkCommandPool pool);
+    friend struct Box<Command_Pool, Alloc>;
 
     Commands make();
     void release(VkCommandBuffer commands);
@@ -98,6 +104,7 @@ private:
     Arc<Device, Alloc> device;
     VkCommandPool command_pool = null;
     Vec<VkCommandBuffer, Alloc> free_list;
+    Queue_Family family = Queue_Family::graphics;
     Thread::Mutex mutex;
 
     template<Queue_Family F>
@@ -137,16 +144,16 @@ private:
         ~This_Thread() {
             if(pool_manager) pool_manager->end_thread();
         }
-        Arc<Command_Pool, Alloc> pool;
-        Arc<Command_Pool_Manager, Alloc> pool_manager;
+        Box<Command_Pool, Alloc> pool;
+        Ref<Command_Pool_Manager> pool_manager;
     };
 
     static inline thread_local This_Thread this_thread;
 
     Arc<Device, Alloc> device;
 
-    Vec<Arc<Command_Pool, Alloc>, Alloc> free_list;
-    Map<Thread::Id, Arc<Command_Pool, Alloc>, Alloc> active_threads;
+    Vec<Box<Command_Pool, Alloc>, Alloc> free_list;
+    Map<Thread::Id, Empty<>, Alloc> active_threads;
     Thread::Mutex mutex;
 };
 

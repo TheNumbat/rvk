@@ -1,6 +1,7 @@
 
 #include <imgui/imgui.h>
 
+#include "commands.h"
 #include "device.h"
 #include "swapchain.h"
 
@@ -8,13 +9,59 @@ namespace rvk::impl {
 
 using namespace rpp;
 
-Frame::Frame(Arc<Device, Alloc> D, Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& pool)
-    : device(move(D)), fence(device.dup()), cmds(pool->make()), available(device.dup()),
-      complete(device.dup()) {
+static VkImageView swapchain_image_view(VkDevice device, VkImage image, VkFormat format) {
+
+    VkImageView view = null;
+
+    VkImageViewCreateInfo view_info = {};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_info.image = image;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    view_info.format = format;
+    view_info.components.r = VK_COMPONENT_SWIZZLE_R;
+    view_info.components.g = VK_COMPONENT_SWIZZLE_G;
+    view_info.components.b = VK_COMPONENT_SWIZZLE_B;
+    view_info.components.a = VK_COMPONENT_SWIZZLE_A;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.levelCount = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.layerCount = 1;
+
+    RVK_CHECK(vkCreateImageView(device, &view_info, null, &view));
+    return view;
 }
 
-Swapchain::Swapchain(Arc<Physical_Device, Alloc>& physical_device, Arc<Device, Alloc> D,
-                     VkSurfaceKHR surface, u32 frames_in_flight)
+static void swapchain_image_setup(Commands& commands, VkImage image) {
+
+    VkImageMemoryBarrier2 barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_NONE;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_NONE;
+
+    VkDependencyInfo dependency = {};
+    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency.imageMemoryBarrierCount = 1;
+    dependency.pImageMemoryBarriers = &barrier;
+    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    vkCmdPipelineBarrier2(commands, &dependency);
+}
+
+Swapchain::Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_device,
+                     Arc<Device, Alloc> D, VkSurfaceKHR surface, u32 frames_in_flight)
     : device(move(D)) {
 
     Profile::Time_Point start = Profile::timestamp();
@@ -85,11 +132,40 @@ Swapchain::Swapchain(Arc<Physical_Device, Alloc>& physical_device, Arc<Device, A
 
     RVK_CHECK(vkCreateSwapchainKHR(*device, &sw_info, null, &swapchain));
 
+    {
+        u32 n_images = 0;
+        RVK_CHECK(vkGetSwapchainImagesKHR(*device, swapchain, &n_images, null));
+        if(!n_images) {
+            die("[rvk] Got zero images from swapchain!");
+        }
+
+        Region(R) {
+            auto image_data = Vec<VkImage, Mregion<R>>::make(n_images);
+
+            RVK_CHECK(vkGetSwapchainImagesKHR(*device, swapchain, &n_images, image_data.data()));
+            if(!n_images) {
+                die("[rvk] Got zero images from swapchain!");
+            }
+            info("[rvk] Got % swapchain images.", n_images);
+
+            for(u32 i = 0; i < n_images; i++) {
+                auto view = swapchain_image_view(*device, image_data[i], surface_format.format);
+                slots.emplace(image_data[i], view);
+                swapchain_image_setup(cmds, image_data[i]);
+            }
+        }
+    }
+
     Profile::Time_Point end = Profile::timestamp();
     info("[rvk] Created swapchain in %ms.", Profile::ms(end - start));
 }
 
 Swapchain::~Swapchain() {
+    for(auto& [image, view] : slots) {
+        vkDestroyImageView(*device, view, null);
+        image = null;
+        view = null;
+    }
     if(swapchain) {
         vkDestroySwapchainKHR(*device, swapchain, null);
         info("[rvk] Destroyed swapchain.");

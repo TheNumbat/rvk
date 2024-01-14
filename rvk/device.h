@@ -105,6 +105,8 @@ struct Device {
     u64 queue_count(Queue_Family family);
     VkQueue queue(Queue_Family family, u32 index = 0);
 
+    void submit(Commands& cmds, u32 index, Fence& fence);
+
     operator VkDevice() const {
         return device;
     }
@@ -133,6 +135,8 @@ private:
     Vec<VkQueue, Alloc> graphics_qs;
     Vec<VkQueue, Alloc> compute_qs;
     Vec<VkQueue, Alloc> transfer_qs;
+
+    Thread::Mutex mutex;
 };
 
 } // namespace impl

@@ -110,8 +110,8 @@ Semaphore& Semaphore::operator=(Semaphore&& src) {
     return *this;
 }
 
-Commands::Commands(Arc<Command_Pool, Alloc> pool, VkCommandBuffer buffer)
-    : pool(move(pool)), buffer(buffer) {
+Commands::Commands(Arc<Command_Pool, Alloc> pool, Queue_Family family, VkCommandBuffer buffer)
+    : pool(move(pool)), family_(family), buffer(buffer) {
 }
 
 Commands::~Commands() {
@@ -149,8 +149,8 @@ void Commands::end() {
     RVK_CHECK(vkEndCommandBuffer(buffer));
 }
 
-Command_Pool::Command_Pool(Arc<Device, Alloc> device, VkCommandPool pool)
-    : device(move(device)), command_pool(pool) {
+Command_Pool::Command_Pool(Arc<Device, Alloc> device, Queue_Family family, VkCommandPool pool)
+    : device(move(device)), command_pool(pool), family(family) {
 }
 
 Command_Pool::~Command_Pool() {
@@ -183,7 +183,7 @@ Commands Command_Pool::make() {
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     RVK_CHECK(vkBeginCommandBuffer(buffer, &begin_info));
 
-    return Commands{Arc<Command_Pool, Alloc>::from_this(this), buffer};
+    return Commands{Arc<Command_Pool, Alloc>::from_this(this), family, buffer};
 }
 
 void Command_Pool::release(VkCommandBuffer buffer) {
@@ -235,7 +235,7 @@ void Command_Pool_Manager<F>::begin_thread() {
         VkCommandPool pool = null;
         RVK_CHECK(vkCreateCommandPool(*device, &create_info, null, &pool));
 
-        this_thread.pool = Arc<Command_Pool, Alloc>::make(device.dup(), pool);
+        this_thread.pool = Box<Command_Pool, Alloc>::make(device.dup(), F, pool);
 
         Profile::Time_Point end = Profile::timestamp();
         info("[rvk] Allocated new % command pool for thread % in %ms.", F, id,
@@ -248,8 +248,8 @@ void Command_Pool_Manager<F>::begin_thread() {
         free_list.pop();
     }
 
-    this_thread.pool_manager = Arc<Command_Pool_Manager<F>, Alloc>::from_this(this);
-    active_threads.insert(id, this_thread.pool.dup());
+    this_thread.pool_manager = Ref{*this};
+    active_threads.insert(id, {});
 }
 
 template<Queue_Family F>
@@ -267,8 +267,8 @@ void Command_Pool_Manager<F>::end_thread() {
     free_list.push(move(this_thread.pool));
     active_threads.erase(id);
 
-    this_thread.pool_manager = {};
     this_thread.pool = {};
+    this_thread.pool_manager = {};
 }
 
 template<Queue_Family F>

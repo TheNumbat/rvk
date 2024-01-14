@@ -4,6 +4,7 @@
 #include "commands.h"
 #include "descriptors.h"
 #include "device.h"
+#include "imgui_impl_vulkan.h"
 #include "instance.h"
 #include "memory.h"
 #include "rvk.h"
@@ -14,6 +15,57 @@ namespace rvk {
 using namespace rpp;
 
 namespace impl {
+
+struct Deletion_Queue {
+    using Finalizer = FunctionN<8, void()>;
+
+    explicit Deletion_Queue() = default;
+    ~Deletion_Queue() = default;
+
+    Deletion_Queue(const Deletion_Queue&) = delete;
+    Deletion_Queue& operator=(const Deletion_Queue&) = delete;
+
+    Deletion_Queue(Deletion_Queue&& src) : deletion_queue{move(src.deletion_queue)} {
+    }
+    Deletion_Queue& operator=(Deletion_Queue&& src) {
+        assert(this != &src);
+        deletion_queue = move(src.deletion_queue);
+        return *this;
+    }
+
+    void clear() {
+        Thread::Lock lock{mutex};
+        deletion_queue.clear();
+    }
+    void push(Finalizer&& finalizer) {
+        Thread::Lock lock{mutex};
+        deletion_queue.push(move(finalizer));
+    }
+
+private:
+    Thread::Mutex mutex;
+    Vec<Finalizer, Alloc> deletion_queue;
+};
+
+struct Frame {
+    explicit Frame(Arc<Device, Alloc> device,
+                   Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& graphics_command_pool)
+        : fence{device.dup()}, cmds{graphics_command_pool->make()}, available{device.dup()},
+          complete{device.dup()} {
+    }
+    ~Frame() = default;
+
+    Frame(const Frame&) = delete;
+    Frame& operator=(const Frame&) = delete;
+
+    Frame(Frame&&) = default;
+    Frame& operator=(Frame&&) = default;
+
+    Fence fence;
+    Commands cmds;
+    Semaphore available, complete;
+    Vec<Pair<Semaphore, VkShaderStageFlags>, Alloc> wait_for;
+};
 
 struct Vk {
     Arc<Instance, Alloc> instance;
@@ -29,6 +81,7 @@ struct Vk {
     Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc> compute_command_pool;
 
     Vec<Frame, Alloc> frames;
+    Vec<Deletion_Queue, Alloc> deletion_queues;
 
     explicit Vk(Config config) {
 
@@ -62,9 +115,94 @@ struct Vk {
         compute_command_pool =
             Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc>::make(device.dup());
 
-        // TODO make this initialize the images
-        swapchain = Arc<Swapchain, Alloc>::make(physical_device, device.dup(), instance->surface(),
-                                                config.frames_in_flight);
+        { // Create per-frame resources
+            Profile::Time_Point start = Profile::timestamp();
+
+            frames.reserve(config.frames_in_flight);
+            for(u32 i = 0; i < config.frames_in_flight; i++) {
+                frames.emplace(device.dup(), graphics_command_pool);
+                deletion_queues.emplace();
+            }
+
+            Profile::Time_Point end = Profile::timestamp();
+            info("Created resources for % frame(s) in %ms.", config.frames_in_flight,
+                 Profile::ms(end - start));
+        }
+
+        sync([&](Commands& cmds) {
+            swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
+                                                    instance->surface(), config.frames_in_flight);
+        });
+
+        { // Initialize ImGui
+            Profile::Time_Point start = Profile::timestamp();
+
+            ImGui_ImplVulkan_InitInfo init = {};
+            init.Instance = *instance;
+            init.PhysicalDevice = *physical_device;
+            init.Device = *device;
+            init.QueueFamily = *physical_device->queue_index(Queue_Family::graphics);
+            init.Queue = device->queue(Queue_Family::graphics);
+            init.DescriptorPool = *descriptor_pool;
+            init.MinImageCount = swapchain->min_image_count();
+            init.CheckVkResultFn = check;
+            init.UseDynamicRendering = true;
+            init.ColorAttachmentFormat = swapchain->format();
+
+            // The ImGui Vulkan backend will create resources for this many frames.
+            init.ImageCount = Math::max(config.frames_in_flight, swapchain->min_image_count());
+
+            if(!ImGui_ImplVulkan_Init(&init, null)) {
+                die("[rvk] Failed to initialize ImGui vulkan backend!");
+            }
+
+            Profile::Time_Point end = Profile::timestamp();
+            info("[rvk] Created ImGui vulkan backend in %ms.", Profile::ms(end - start));
+        }
+    }
+
+    ~Vk() {
+        ImGui_ImplVulkan_Shutdown();
+        wait_idle();
+    }
+
+    Commands make_commands(Queue_Family family) {
+        switch(family) {
+        case Queue_Family::graphics: return graphics_command_pool->make();
+        case Queue_Family::transfer: return transfer_command_pool->make();
+        case Queue_Family::compute: return compute_command_pool->make();
+        default: RPP_UNREACHABLE;
+        }
+    }
+
+    void submit_and_wait(Commands cmds, u32 index) {
+        Fence fence{device.dup()};
+        device->submit(cmds, index, fence);
+        fence.wait();
+    }
+
+    void wait_idle() {
+        vkDeviceWaitIdle(*device);
+        for(auto& queue : deletion_queues) {
+            queue.clear();
+        }
+    }
+
+    template<typename F>
+        requires Invocable<F, Commands&>
+    auto sync(F&& f, Queue_Family family = Queue_Family::graphics, u32 index = 0)
+        -> Invoke_Result<F, Commands&> {
+        Commands cmds = make_commands(family);
+        if constexpr(Same<Invoke_Result<F, Commands&>, void>) {
+            f(cmds);
+            cmds.end();
+            submit_and_wait(move(cmds), index);
+        } else {
+            auto result = f(cmds);
+            cmds.end();
+            submit_and_wait(move(cmds), index);
+            return result;
+        }
     }
 };
 
@@ -180,8 +318,8 @@ bool startup(Config config) {
 }
 
 void shutdown() {
-    ImGui::DestroyContext();
     impl::singleton.clear();
+    ImGui::DestroyContext();
     info("[rvk] Completed shutdown.");
 }
 

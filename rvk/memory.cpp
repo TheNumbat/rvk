@@ -2,6 +2,7 @@
 #include <imgui/imgui.h>
 
 #include "memory.h"
+#include "commands.h"
 
 namespace rvk::impl {
 
@@ -141,6 +142,47 @@ Image& Image::operator=(Image&& src) {
     address = src.address;
     src.address = null;
     return *this;
+}
+
+Image_View Image::view(VkImageAspectFlags aspect) {
+    return Image_View{*this, aspect};
+}
+
+void Image::setup(Commands& commands, VkImageLayout layout) {
+    transition(commands, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, layout,
+               VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+               VK_ACCESS_2_NONE, VK_ACCESS_2_NONE);
+}
+
+void Image::transition(Commands& commands, VkImageAspectFlags aspect, VkImageLayout src_layout,
+                       VkImageLayout dst_layout, VkPipelineStageFlags2 src_stage,
+                       VkPipelineStageFlags2 dst_stage, VkAccessFlags2 src_access,
+                       VkAccessFlags2 dst_access) {
+
+    VkImageMemoryBarrier2 barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barrier.oldLayout = src_layout;
+    barrier.newLayout = dst_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = aspect;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcStageMask = src_stage;
+    barrier.srcAccessMask = src_access;
+    barrier.dstStageMask = dst_stage;
+    barrier.dstAccessMask = dst_access;
+
+    VkDependencyInfo dependency = {};
+    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency.imageMemoryBarrierCount = 1;
+    dependency.pImageMemoryBarriers = &barrier;
+    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    vkCmdPipelineBarrier2(commands, &dependency);
 }
 
 Image_View::Image_View(Image& image, VkImageAspectFlags aspect)
