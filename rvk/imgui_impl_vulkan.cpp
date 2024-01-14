@@ -419,6 +419,7 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, req.memoryTypeBits);
     err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &buffer_memory);
     check_vk_result(err);
+    vkSetDeviceMemoryPriorityEXT(v->Device, buffer_memory, 1.0f);
 
     err = vkBindBufferMemory(v->Device, buffer, buffer_memory, 0);
     check_vk_result(err);
@@ -686,6 +687,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, req.memoryTypeBits);
         err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &bd->FontMemory);
         check_vk_result(err);
+        vkSetDeviceMemoryPriorityEXT(v->Device, bd->FontMemory, 1.0f);
         err = vkBindImageMemory(v->Device, bd->FontImage, bd->FontMemory, 0);
         check_vk_result(err);
     }
@@ -726,6 +728,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         alloc_info.allocationSize = IM_MAX(v->MinAllocationSize, req.size);
         alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, req.memoryTypeBits);
         err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &upload_buffer_memory);
+        vkSetDeviceMemoryPriorityEXT(v->Device, upload_buffer_memory, 1.0f);
         check_vk_result(err);
         err = vkBindBufferMemory(v->Device, upload_buffer, upload_buffer_memory, 0);
         check_vk_result(err);

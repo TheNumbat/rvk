@@ -98,7 +98,6 @@ String_View describe(VkResult result) {
 }
 
 struct Deletion_Queue {
-    using Finalizer = FunctionN<8, void()>;
 
     explicit Deletion_Queue() = default;
     ~Deletion_Queue() = default;
@@ -184,6 +183,7 @@ struct Vk {
     void wait_idle();
     void submit_and_wait(Commands cmds, u32 index);
     Commands make_commands(Queue_Family family);
+    void drop(Finalizer f);
 
     void imgui();
     void create_imgui();
@@ -348,6 +348,10 @@ void Vk::wait_idle() {
     }
 }
 
+void Vk::drop(Finalizer f) {
+    deletion_queues[state.frame_index].push(move(f));
+}
+
 void Vk::begin_frame() {
 
     state.resized_last_frame = false;
@@ -376,7 +380,7 @@ void Vk::begin_frame() {
     //         img acq -frame.avail->  x  -frame.finish-> presentation -implicit-> img acq
     VkResult result;
     Trace("Acquire next image") {
-        result = vkAcquireNextImageKHR(*device, *swapchain, UINT64_MAX,
+        result = vkAcquireNextImageKHR(*device, *swapchain, RPP_UINT64_MAX,
                                        frames[state.frame_index].available, null,
                                        &state.swapchain_index);
     }
@@ -515,6 +519,10 @@ bool startup(Config config) {
 void shutdown() {
     impl::singleton.clear();
     info("[rvk] Completed shutdown.");
+}
+
+void drop(Finalizer f) {
+    impl::singleton->drop(move(f));
 }
 
 void imgui() {

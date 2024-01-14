@@ -38,7 +38,7 @@ private:
 };
 
 struct Sem_Ref {
-    explicit Sem_Ref(Semaphore& sem, VkPipelineStageFlags2 stage = 0) : sem(sem), stage(stage) {
+    explicit Sem_Ref(Semaphore& sem, VkPipelineStageFlags2 stage) : sem(sem), stage(stage) {
     }
     Ref<Semaphore> sem;
     VkPipelineStageFlags2 stage;

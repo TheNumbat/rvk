@@ -208,8 +208,9 @@ void Instance::imgui() {
     RVK_CHECK(vkEnumerateInstanceVersion(&vk_version));
 
     Text("Instance Version: %u", vk_version);
-    if(TreeNode("Extensions")) {
-        for(auto& ext : available_extensions) Text("%s", ext.extensionName);
+    if(TreeNode("Available Extensions")) {
+        for(auto& ext : available_extensions)
+            if(ext.extensionName[0]) Text("%s", ext.extensionName);
         TreePop();
     }
     if(TreeNode("Enabled Extensions")) {

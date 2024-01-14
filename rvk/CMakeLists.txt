@@ -4,6 +4,8 @@ project(rvk LANGUAGES CXX)
 
 set(SOURCES_RVK
     "fwd.h"
+    "drop.h"
+    "execute.h"
     "rvk.h"
     "rvk.cpp"
     "instance.cpp"

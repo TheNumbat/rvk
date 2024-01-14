@@ -227,6 +227,7 @@ Image_View::Image_View(Image_View&& src) {
 Image_View& Image_View::operator=(Image_View&& src) {
     assert(this != &src);
     this->~Image_View();
+    device = move(src.device);
     view = src.view;
     src.view = null;
     aspect_mask = src.aspect_mask;

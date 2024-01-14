@@ -335,7 +335,8 @@ void Physical_Device::imgui() {
              : "Discrete");
 
     if(TreeNode("Available Extensions")) {
-        for(auto& p : available_extensions) Text("%s", p.extensionName);
+        for(auto& p : available_extensions)
+            if(p.extensionName[0]) Text("%s", p.extensionName);
         TreePop();
     }
 }
@@ -635,12 +636,14 @@ void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_
             VkSemaphoreSubmitInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
             info.semaphore = *signal[i].sem;
+            info.stageMask = signal[i].stage;
             vk_signal.push(info);
         }
         for(u64 i = 0; i < wait.length(); i++) {
             VkSemaphoreSubmitInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
             info.semaphore = *wait[i].sem;
+            info.stageMask = wait[i].stage;
             vk_wait.push(info);
         }
 
@@ -680,8 +683,7 @@ void Device::imgui() {
     Text("SBT handle alignment: %lu", sbt_handle_alignment());
 
     if(TreeNode("Enabled Extensions")) {
-        for(auto& ext : enabled_extensions)
-            Text("%.*s", ext.length(), reinterpret_cast<const char*>(ext.data()));
+        for(auto& ext : enabled_extensions) Text("%.*s", ext.length(), ext.data());
         TreePop();
     }
 }
