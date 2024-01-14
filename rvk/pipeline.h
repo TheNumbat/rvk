@@ -43,7 +43,6 @@ struct Pipeline {
         Create_Info info;
     };
 
-    explicit Pipeline(Arc<Device, Alloc> device, Config config);
     ~Pipeline();
 
     Pipeline(const Pipeline&) = delete;
@@ -59,6 +58,9 @@ struct Pipeline {
     }
 
 private:
+    explicit Pipeline(Arc<Device, Alloc> device, Config config);
+    friend Pipeline make_pipeline(Config config);
+
     Arc<Device, Alloc> device;
 
     Kind kind = Kind::graphics;

@@ -5,6 +5,7 @@ project(rvk LANGUAGES CXX)
 set(SOURCES_RVK
     "drop.h"
     "execute.h"
+    "bindings.h"
     "fwd.h"
     "fwd.cpp"
     "rvk.h"

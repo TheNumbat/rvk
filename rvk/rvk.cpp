@@ -416,6 +416,10 @@ void Vk::recreate_swapchain() {
     }
 }
 
+Pipeline make_pipeline(Pipeline::Config config) {
+    return Pipeline{singleton->device.dup(), move(config)};
+}
+
 } // namespace impl
 
 bool startup(Config config) {
@@ -531,6 +535,14 @@ void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signa
 
 void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal, Fence& fence) {
     impl::singleton->device->submit(cmds, index, wait, signal, fence);
+}
+
+Pipeline make_pipeline(Pipeline::Config config) {
+    return impl::make_pipeline(move(config));
+}
+
+Arc<impl::Device, Alloc> get_device() {
+    return impl::singleton->device.dup();
 }
 
 } // namespace rvk

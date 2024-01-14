@@ -197,7 +197,7 @@ Compositor::Compositor(Arc<Device, Alloc>& device, Arc<Descriptor_Pool, Alloc>& 
       ds_layout(device.dup(), compositor_ds_layout()),
       ds(pool->make(ds_layout, swapchain->frame_count())),
       sampler(device.dup(), VK_FILTER_NEAREST, VK_FILTER_NEAREST),
-      pipeline(device.dup(), compositor_pipeline_config(swapchain, ds_layout, v, f)) {
+      pipeline(make_pipeline(compositor_pipeline_config(swapchain, ds_layout, v, f))) {
     info("[rvk] Created compositor.");
 }
 

@@ -58,4 +58,19 @@ String_View describe(VkObjectType object);
 void check(VkResult result);
 
 } // namespace impl
+
+using impl::BLAS;
+using impl::Buffer;
+using impl::Commands;
+using impl::Descriptor_Set;
+using impl::Descriptor_Set_Layout;
+using impl::Fence;
+using impl::Image;
+using impl::Image_View;
+using impl::Pipeline;
+using impl::Sem_Ref;
+using impl::Semaphore;
+using impl::Shader;
+using impl::TLAS;
+
 } // namespace rvk

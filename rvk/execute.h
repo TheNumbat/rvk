@@ -8,7 +8,17 @@
 
 namespace rvk {
 
+namespace impl {
+Arc<Device, Alloc> get_device();
+}
+
 using namespace rpp;
+
+template<Type_List L>
+    requires(Reflect::All<Is_Binding, L>)
+Descriptor_Set_Layout make_layout() {
+    Bind::make<L>(impl::get_device());
+}
 
 template<typename F>
     requires Invocable<F, Commands&>

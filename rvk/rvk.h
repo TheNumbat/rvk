@@ -7,6 +7,7 @@
 #include "fwd.h"
 
 #include "acceleration.h"
+#include "bindings.h"
 #include "commands.h"
 #include "descriptors.h"
 #include "drop.h"
@@ -18,21 +19,9 @@ namespace rvk {
 
 using namespace rpp;
 
-using impl::BLAS;
-using impl::Buffer;
-using impl::Commands;
-using impl::Fence;
-using impl::Image;
-using impl::Image_View;
-using impl::Pipeline;
-using impl::Sem_Ref;
-using impl::Semaphore;
-using impl::Shader;
-using impl::TLAS;
+// Setup
 
 using Finalizer = FunctionN<8, void()>;
-
-// Setup
 
 struct Config {
     bool validation = true;
@@ -56,6 +45,9 @@ void reset_imgui();
 // Info
 
 void imgui();
+bool resized();
+u32 frame();
+u32 previous_frame();
 VkExtent2D extent();
 
 // Frame lifecycle
@@ -63,10 +55,6 @@ VkExtent2D extent();
 void begin_frame();
 void wait_frame(Sem_Ref sem);
 void end_frame(Image_View& output);
-
-u32 frame();
-u32 previous_frame();
-bool resized();
 
 // Resources
 
@@ -83,6 +71,12 @@ Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
 Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets);
 
 // Pipelines
+
+template<Type_List L>
+    requires(Reflect::All<Is_Binding, L>)
+Descriptor_Set_Layout make_layout();
+
+Pipeline make_pipeline(Pipeline::Config config);
 
 Shader_Loader make_shader_loader();
 
