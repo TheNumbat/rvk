@@ -4,6 +4,10 @@
 #include "commands.h"
 #include "device.h"
 
+#ifdef RPP_OS_LINUX
+#include <sys/epoll.h>
+#endif
+
 namespace rvk::impl {
 
 using namespace rpp;

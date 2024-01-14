@@ -8,6 +8,11 @@ namespace rvk::impl {
 
 using namespace rpp;
 
+Frame::Frame(Arc<Device, Alloc> D, Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& pool)
+    : device(move(D)), fence(device.dup()), cmds(pool->make()), available(device.dup()),
+      complete(device.dup()) {
+}
+
 Swapchain::Swapchain(Arc<Physical_Device, Alloc>& physical_device, Arc<Device, Alloc> D,
                      VkSurfaceKHR surface, u32 frames_in_flight)
     : device(move(D)) {

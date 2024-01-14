@@ -5,11 +5,38 @@
 #include <rpp/rc.h>
 
 #include "fwd.h"
+
+#include "commands.h"
 #include "memory.h"
 
 namespace rvk::impl {
 
 using namespace rpp;
+
+struct Frame {
+
+    explicit Frame(Arc<Device, Alloc> device,
+                   Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& pool);
+    ~Frame() = default;
+
+    Frame(const Frame&) = delete;
+    Frame& operator=(const Frame&) = delete;
+    Frame(Frame&&) = delete;
+    Frame& operator=(Frame&&) = delete;
+
+    using Finalizer = FunctionN<8, void()>;
+
+private:
+    Arc<Device, Alloc> device;
+
+    Fence fence;
+    Commands cmds;
+    Semaphore available, complete;
+    Vec<Pair<Semaphore, VkShaderStageFlags>, Alloc> wait_for;
+
+    Thread::Mutex mutex;
+    Vec<Finalizer, Alloc> deletion_queue;
+};
 
 struct Swapchain {
 

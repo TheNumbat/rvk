@@ -28,6 +28,8 @@ struct Vk {
     Arc<Command_Pool_Manager<Queue_Family::transfer>, Alloc> transfer_command_pool;
     Arc<Command_Pool_Manager<Queue_Family::compute>, Alloc> compute_command_pool;
 
+    Vec<Frame, Alloc> frames;
+
     explicit Vk(Config config) {
 
         instance =

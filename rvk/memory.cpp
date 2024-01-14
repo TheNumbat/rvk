@@ -9,7 +9,7 @@ using namespace rpp;
 
 Device_Memory::Device_Memory(const Arc<Physical_Device, Alloc>& physical_device,
                              Arc<Device, Alloc> D, Heap location, u64 heap_size)
-    : device(move(D)), allocator(heap_size), location(location) {
+    : device(move(D)), location(location), allocator(heap_size) {
 
     VkMemoryAllocateFlagsInfo flags = {};
     flags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
