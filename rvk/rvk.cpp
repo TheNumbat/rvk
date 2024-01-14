@@ -24,23 +24,23 @@ struct Vk {
 
     explicit Vk(Config config) {
 
-        instance = Arc<Instance, Alloc>{move(config.swapchain_extensions), move(config.layers),
-                                        config.validation};
+        instance = Arc<Instance, Alloc>::make(move(config.swapchain_extensions),
+                                              move(config.layers), config.validation);
 
-        debug_callback = Arc<Debug_Callback, Alloc>{instance.dup()};
+        debug_callback = Arc<Debug_Callback, Alloc>::make(instance.dup());
 
         surface = config.create_surface(*instance);
 
         physical_device = instance->physical_device(surface, config.ray_tracing);
 
-        device = Arc<Device, Alloc>{physical_device.dup(), surface, config.ray_tracing};
+        device = Arc<Device, Alloc>::make(physical_device.dup(), surface, config.ray_tracing);
 
-        host_memory = Arc<Device_Memory, Alloc>{physical_device, device.dup(), Heap::host,
-                                                config.staging_heap};
+        host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
+                                                      config.host_heap);
 
-        device_memory =
-            Arc<Device_Memory, Alloc>{physical_device, device.dup(), Heap::device,
-                                      device->heap_size(Heap::device) - config.device_heap_margin};
+        device_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::device,
+                                                        device->heap_size(Heap::device) -
+                                                            config.device_heap_margin);
     }
 
     ~Vk() {

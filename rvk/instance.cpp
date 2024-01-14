@@ -225,7 +225,7 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
 
         Vec<Arc<Physical_Device, Alloc>, Mregion<R>> physical_devices;
         for(u32 i = 0; i < n_devices; i++) {
-            physical_devices.push(Arc<Physical_Device, Alloc>{vk_physical_devices[i]});
+            physical_devices.push(Arc<Physical_Device, Alloc>::make(vk_physical_devices[i]));
         }
 
         Vec<Arc<Physical_Device, Alloc>, Mregion<R>> compatible_devices;
@@ -261,7 +261,7 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
 
                 for(auto& extension : Device::baseline_extensions()) {
                     if(device->supports_extension(String_View{extension})) {
-                        info("[rvk] Found device extension: %", String_View{extension});
+                        info("[rvk] Found extension: %", String_View{extension});
                     } else {
                         info("[rvk] Device does not support extension %", extension);
                         supported = false;
@@ -271,8 +271,7 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
                 if(ray_tracing) {
                     for(auto& extension : Device::ray_tracing_extensions()) {
                         if(device->supports_extension(String_View{extension})) {
-                            info("[rvk] Found device ray tracing extension: %",
-                                 String_View{extension});
+                            info("[rvk] Found ray tracing extension: %", String_View{extension});
                         } else {
                             info("[rvk] Device does not support ray tracing extension %",
                                  extension);

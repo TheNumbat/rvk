@@ -12,7 +12,6 @@ using namespace rpp;
 
 struct Debug_Callback {
 
-    explicit Debug_Callback(Arc<Instance, Alloc> instance);
     ~Debug_Callback();
 
     Debug_Callback(const Debug_Callback&) = delete;
@@ -21,13 +20,15 @@ struct Debug_Callback {
     Debug_Callback& operator=(Debug_Callback&&) = delete;
 
 private:
+    explicit Debug_Callback(Arc<Instance, Alloc> instance);
+    friend struct Arc<Debug_Callback, Alloc>;
+
     Arc<Instance, Alloc> instance;
     VkDebugUtilsMessengerEXT messenger = null;
 };
 
 struct Instance {
 
-    explicit Instance(Slice<String_View> extensions, Slice<String_View> layers, bool validation);
     ~Instance();
 
     Instance(const Instance&) = delete;
@@ -46,6 +47,9 @@ struct Instance {
     static Slice<const char*> baseline_extensions();
 
 private:
+    explicit Instance(Slice<String_View> extensions, Slice<String_View> layers, bool validation);
+    friend struct Arc<Instance, Alloc>;
+
     void check_extensions(Slice<const char*> extensions);
 
     VkInstance instance = null;

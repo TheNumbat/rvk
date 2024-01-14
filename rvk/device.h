@@ -25,7 +25,6 @@ struct Physical_Device {
         VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing = {};
     };
 
-    explicit Physical_Device(VkPhysicalDevice device);
     ~Physical_Device() = default;
 
     Physical_Device(const Physical_Device&) = delete;
@@ -68,6 +67,9 @@ struct Physical_Device {
     }
 
 private:
+    explicit Physical_Device(VkPhysicalDevice device);
+    friend struct Arc<Physical_Device, Alloc>;
+
     u32 n_surface_formats(VkSurfaceKHR surface);
     u32 n_present_modes(VkSurfaceKHR surface);
     void get_surface_formats(VkSurfaceKHR surface, Slice<VkSurfaceFormatKHR> formats);
@@ -81,8 +83,6 @@ private:
 
 struct Device {
 
-    explicit Device(Arc<Physical_Device, Alloc> physical_device, VkSurfaceKHR surface,
-                    bool ray_tracing);
     ~Device();
 
     Device(const Device&) = delete;
@@ -111,6 +111,10 @@ struct Device {
     static Slice<const char*> ray_tracing_extensions();
 
 private:
+    explicit Device(Arc<Physical_Device, Alloc> physical_device, VkSurfaceKHR surface,
+                    bool ray_tracing);
+    friend struct Arc<Device, Alloc>;
+
     Arc<Physical_Device, Alloc> physical_device;
     Vec<String<Alloc>, Alloc> enabled_extensions;
 

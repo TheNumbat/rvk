@@ -17,8 +17,8 @@ struct Config {
     Slice<String_View> swapchain_extensions;
     Function<VkSurfaceKHR(VkInstance)> create_surface;
 
+    u64 host_heap = Math::GB(1);
     u64 device_heap_margin = Math::GB(1);
-    u64 staging_heap = Math::GB(1);
 };
 
 bool startup(Config config);
