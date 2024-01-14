@@ -80,5 +80,4 @@ For faster parallel builds, you can instead generate [ninja](https://ninja-build
 Finish porting
 - [ ] shader hot reloading
 - [ ] descriptor gen
-- [ ] drop
-- [ ] accelerations structures
+- [ ] acceleration structures
