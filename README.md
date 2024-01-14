@@ -78,5 +78,4 @@ For faster parallel builds, you can instead generate [ninja](https://ninja-build
 # ToDo
 
 Finish porting
-- [ ] shader hot reloading
 - [ ] descriptor gen

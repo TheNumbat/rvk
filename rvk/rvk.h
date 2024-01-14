@@ -8,8 +8,11 @@
 
 #include "acceleration.h"
 #include "commands.h"
+#include "descriptors.h"
 #include "drop.h"
 #include "memory.h"
+#include "pipeline.h"
+#include "shader_loader.h"
 
 namespace rvk {
 
@@ -21,8 +24,10 @@ using impl::Commands;
 using impl::Fence;
 using impl::Image;
 using impl::Image_View;
+using impl::Pipeline;
 using impl::Sem_Ref;
 using impl::Semaphore;
+using impl::Shader;
 using impl::TLAS;
 
 using Finalizer = FunctionN<8, void()>;
@@ -76,6 +81,10 @@ Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage);
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
 Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets);
+
+// Pipelines
+
+Shader_Loader make_shader_loader();
 
 // Command execution
 
