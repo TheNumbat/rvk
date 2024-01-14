@@ -18,6 +18,8 @@ set(SOURCES_RVK
     "descriptors.h"
     "commands.h"
     "commands.cpp"
+    "pipeline.h"
+    "pipeline.cpp"
     "imgui_impl_vulkan.cpp"
     "imgui_impl_vulkan.h"
 )

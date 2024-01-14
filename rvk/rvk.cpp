@@ -162,8 +162,8 @@ struct Vk {
     }
 
     ~Vk() {
-        ImGui_ImplVulkan_Shutdown();
         wait_idle();
+        ImGui_ImplVulkan_Shutdown();
     }
 
     Commands make_commands(Queue_Family family) {
