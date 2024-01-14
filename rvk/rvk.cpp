@@ -180,11 +180,6 @@ struct Vk {
     explicit Vk(Config config);
     ~Vk();
 
-    void wait_idle();
-    void submit_and_wait(Commands cmds, u32 index);
-    Commands make_commands(Queue_Family family);
-    void drop(Finalizer f);
-
     void imgui();
     void create_imgui();
     void destroy_imgui();
@@ -192,6 +187,14 @@ struct Vk {
 
     void begin_frame();
     void end_frame(Image_View& output);
+
+    void wait_idle();
+    void submit(Commands& cmds, u32 index, Fence& Fence);
+    void submit_and_wait(Commands cmds, u32 index);
+
+    void drop(Finalizer f);
+    Fence make_fence();
+    Commands make_commands(Queue_Family family);
 };
 
 static Opt<Vk> singleton;
@@ -333,6 +336,14 @@ Commands Vk::make_commands(Queue_Family family) {
     case Queue_Family::compute: return compute_command_pool->make();
     default: RPP_UNREACHABLE;
     }
+}
+
+Fence Vk::make_fence() {
+    return Fence{device.dup()};
+}
+
+void Vk::submit(Commands& cmds, u32 index, Fence& fence) {
+    device->submit(cmds, index, fence);
 }
 
 void Vk::submit_and_wait(Commands cmds, u32 index) {
@@ -495,8 +506,16 @@ void Vk::recreate_swapchain() {
     }
 }
 
+Fence make_fence() {
+    return singleton->make_fence();
+}
+
 Commands make_commands(Queue_Family family) {
     return singleton->make_commands(family);
+}
+
+void submit(Commands& cmds, u32 index, Fence& fence) {
+    singleton->submit(cmds, index, fence);
 }
 
 void submit_and_wait(Commands cmds, u32 index) {

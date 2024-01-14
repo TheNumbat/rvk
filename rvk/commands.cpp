@@ -111,7 +111,7 @@ Semaphore& Semaphore::operator=(Semaphore&& src) {
 }
 
 Commands::Commands(Arc<Command_Pool, Alloc> pool, Queue_Family family, VkCommandBuffer buffer)
-    : pool(move(pool)), family_(family), buffer(buffer) {
+    : pool(move(pool)), buffer(buffer), family_(family) {
 }
 
 Commands::~Commands() {
