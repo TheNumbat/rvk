@@ -252,13 +252,14 @@ void Vk::create_imgui() {
     init.QueueFamily = *physical_device->queue_index(Queue_Family::graphics);
     init.Queue = device->queue(Queue_Family::graphics);
     init.DescriptorPool = *descriptor_pool;
-    init.MinImageCount = swapchain->min_image_count();
+    init.MinImageCount = Math::min(2u, swapchain->min_image_count());
     init.CheckVkResultFn = check;
     init.UseDynamicRendering = true;
     init.ColorAttachmentFormat = swapchain->format();
 
     // The ImGui Vulkan backend will create resources for this many frames.
-    init.ImageCount = Math::max(state.frames_in_flight, swapchain->min_image_count());
+    init.ImageCount = Math::max(init.MinImageCount,
+                                Math::max(state.frames_in_flight, swapchain->min_image_count()));
 
     if(!ImGui_ImplVulkan_Init(&init, null)) {
         die("[rvk] Failed to initialize ImGui vulkan backend!");
