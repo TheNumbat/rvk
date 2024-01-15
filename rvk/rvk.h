@@ -46,7 +46,9 @@ void reset_imgui();
 
 void imgui();
 bool resized();
+bool minimized();
 u32 frame();
+u32 frame_count();
 u32 previous_frame();
 VkExtent2D extent();
 
@@ -68,7 +70,7 @@ Opt<Buffer> make_staging(u64 size);
 Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage);
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
-Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets);
+Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
 
 // Pipelines
 
@@ -81,6 +83,10 @@ Descriptor_Set make_set(Descriptor_Set_Layout& layout);
 template<Type_List L, Binding... Binds>
     requires(Same<L, List<Binds...>>)
 void write_set(Descriptor_Set& set, Binds&... binds);
+
+template<Type_List L, Binding... Binds>
+    requires(Same<L, List<Binds...>>)
+void write_set(Descriptor_Set& set, u32 frame_index, Binds&... binds);
 
 Shader_Loader make_shader_loader();
 

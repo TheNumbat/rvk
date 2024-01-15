@@ -384,19 +384,19 @@ void Buffer::copy_from(Commands& commands, Buffer& from) {
     vkCmdCopyBuffer2(commands, &info);
 }
 
-void Buffer::copy_from(Commands& commands, Buffer& from, u64 offset, u64 size) {
+void Buffer::copy_from(Commands& commands, Buffer& src, u64 src_offset, u64 dst_offset, u64 size) {
     assert(buffer);
-    assert(size + offset <= address->length());
+    assert(dst_offset + size <= address->length());
 
     VkBufferCopy2 region = {};
     region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-    region.srcOffset = offset;
-    region.dstOffset = 0;
+    region.srcOffset = src_offset;
+    region.dstOffset = dst_offset;
     region.size = size;
 
     VkCopyBufferInfo2 info = {};
     info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
-    info.srcBuffer = from;
+    info.srcBuffer = src;
     info.dstBuffer = buffer;
     info.regionCount = 1;
     info.pRegions = &region;

@@ -170,7 +170,7 @@ struct Buffer {
 
     void move_from(Commands& commands, Buffer from);
     void copy_from(Commands& commands, Buffer& from);
-    void copy_from(Commands& commands, Buffer& from, u64 offset, u64 size);
+    void copy_from(Commands& commands, Buffer& from, u64 src_offset, u64 dst_offset, u64 size);
 
     operator VkBuffer() const {
         return buffer;

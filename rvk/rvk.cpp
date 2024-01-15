@@ -137,7 +137,7 @@ struct Vk {
     Fence make_fence();
     Semaphore make_semaphore();
     Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
-    Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets);
+    Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
     Pipeline make_pipeline(Pipeline::Info info);
 };
 
@@ -294,6 +294,11 @@ void Vk::begin_frame() {
         deletion_queues[state.frame_index].clear();
     }
 
+    if(state.has_imgui) {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui::NewFrame();
+    }
+
     if(state.minimized) return;
 
     // Get next swapchain image. This will return immediately with the index of the
@@ -330,16 +335,13 @@ void Vk::begin_frame() {
     // the number of swapchain slots. Only the compositing commands have to wait
     // for the frame to actually be available; the main frame can start rendering
     // to its exclusive resources whenever the previous usage of this slot is done.
-
-    if(state.has_imgui) {
-        ImGui_ImplVulkan_NewFrame();
-        ImGui::NewFrame();
-    }
 }
 
 void Vk::end_frame(Image_View& output) {
 
-    if(state.has_imgui) ImGui::EndFrame();
+    if(state.has_imgui) {
+        ImGui::Render();
+    }
 
     // While minimized, check if we are no longer minimized
     if(state.minimized) {
@@ -403,12 +405,12 @@ void Vk::recreate_swapchain() {
         wait_idle();
         destroy_imgui();
         compositor = {};
+        swapchain = {};
 
         sync([&](Commands& cmds) {
             swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
                                                     instance->surface(), state.frames_in_flight);
         });
-
         compositor = Arc<Compositor, Alloc>::make(device, descriptor_pool, swapchain.dup());
 
         create_imgui();
@@ -432,8 +434,8 @@ Opt<TLAS::Staged> Vk::make_tlas(Buffer& instances, u32 n_instances) {
     return TLAS::make(device_memory.dup(), instances, n_instances);
 }
 
-Opt<BLAS::Staged> Vk::make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets) {
-    return BLAS::make(device_memory.dup(), geometry, move(offsets));
+Opt<BLAS::Staged> Vk::make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
+    return BLAS::make(device_memory.dup(), move(geometry), move(offsets));
 }
 
 Pipeline Vk::make_pipeline(Pipeline::Info info) {
@@ -479,6 +481,10 @@ void begin_frame() {
     impl::singleton->begin_frame();
 }
 
+bool minimized() {
+    return impl::singleton->state.minimized;
+}
+
 void wait_frame(Sem_Ref sem) {
     impl::singleton->frames[impl::singleton->state.frame_index].wait(sem);
 }
@@ -489,6 +495,10 @@ void end_frame(Image_View& output) {
 
 u32 frame() {
     return impl::singleton->state.frame_index;
+}
+
+u32 frame_count() {
+    return impl::singleton->state.frames_in_flight;
 }
 
 u32 previous_frame() {
@@ -537,8 +547,8 @@ Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances) {
     return impl::singleton->make_tlas(instances, n_instances);
 }
 
-Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets) {
-    return impl::singleton->make_blas(geometry, move(offsets));
+Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
+    return impl::singleton->make_blas(move(geometry), move(offsets));
 }
 
 void submit(Commands& cmds, u32 index) {

@@ -92,15 +92,15 @@ struct BLAS {
         Staged& operator=(Staged&& src) = default;
 
     private:
-        explicit Staged(Buffer result, Buffer scratch, Buffer& geometry, u64 result_size,
+        explicit Staged(Buffer result, Buffer scratch, Buffer geometry, u64 result_size,
                         Vec<Offsets, Alloc> offsets, Arc<Device_Memory, Alloc> memory)
-            : result(move(result)), scratch(move(scratch)), geometry(geometry),
+            : result(move(result)), scratch(move(scratch)), geometry(move(geometry)),
               result_size(result_size), offsets(move(offsets)), memory(move(memory)) {
         }
 
         Buffer result;
         Buffer scratch;
-        Ref<Buffer> geometry;
+        Buffer geometry;
         u64 result_size = 0;
         Vec<Offsets, Alloc> offsets;
         Arc<Device_Memory, Alloc> memory;
@@ -129,7 +129,7 @@ private:
                   VkAccelerationStructureKHR accel);
     friend struct Vk;
 
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& geometry,
+    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer geometry,
                             Vec<Offsets, Alloc> offsets);
 
     Arc<Device_Memory, Alloc> memory;

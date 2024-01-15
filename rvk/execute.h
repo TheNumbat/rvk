@@ -26,6 +26,12 @@ void write_set(Descriptor_Set& set, Binds&... binds) {
     impl::Binder::template write<L, Binds...>(set, frame(), binds...);
 }
 
+template<Type_List L, Binding... Binds>
+    requires(Same<L, List<Binds...>>)
+void write_set(Descriptor_Set& set, u32 frame_index, Binds&... binds) {
+    impl::Binder::template write<L, Binds...>(set, frame_index, binds...);
+}
+
 template<typename F>
     requires Invocable<F, Commands&>
 auto sync(F&& f, Queue_Family family, u32 index) -> Invoke_Result<F, Commands&> {

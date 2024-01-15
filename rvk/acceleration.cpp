@@ -160,7 +160,7 @@ u64 BLAS::gpu_address() {
     return vkGetAccelerationStructureDeviceAddressKHR(*memory->device, &info);
 }
 
-Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& data,
+Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
                              Vec<BLAS::Offsets, Alloc> offsets) {
 
     if(offsets.length() == 0) {
@@ -224,14 +224,12 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& data,
                                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         if(!scratch) return {};
 
-        return Opt{Staged{move(*structure_buf), move(*scratch), data,
+        return Opt{Staged{move(*structure_buf), move(*scratch), move(data),
                           build_sizes.accelerationStructureSize, move(offsets), move(memory)}};
     }
 }
 
 BLAS BLAS::build(Commands& cmds, Staged buffers) {
-
-    assert(buffers.geometry);
 
     // Create acceleration structure
 
@@ -265,7 +263,7 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
         VkAccelerationStructureBuildRangeInfoKHR range = {};
 
-        u64 base_data = buffers.geometry->gpu_address();
+        u64 base_data = buffers.geometry.gpu_address();
         for(auto& offset : buffers.offsets) {
             geom.geometry.triangles.vertexData.deviceAddress = base_data + offset.vertex;
             geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;
@@ -291,6 +289,7 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
         build_info.dstAccelerationStructure = acceleration_structure;
 
         cmds.attach(move(buffers.scratch));
+        cmds.attach(move(buffers.geometry));
 
         Array<VkAccelerationStructureBuildRangeInfoKHR*, 1> range_ptrs{ranges.data()};
 
