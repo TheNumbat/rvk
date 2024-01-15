@@ -416,8 +416,8 @@ void Vk::recreate_swapchain() {
     }
 }
 
-Pipeline make_pipeline(Pipeline::Config config) {
-    return Pipeline{singleton->device.dup(), move(config)};
+Pipeline make_pipeline(Pipeline::Info info) {
+    return Pipeline{singleton->device.dup(), move(info)};
 }
 
 } // namespace impl
@@ -517,10 +517,6 @@ Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets)
     return BLAS::make(impl::singleton->device_memory.dup(), geometry, move(offsets));
 }
 
-Shader_Loader make_shader_loader() {
-    return Shader_Loader{impl::singleton->device.dup()};
-}
-
 void submit(Commands& cmds, u32 index) {
     impl::singleton->device->submit(cmds, index);
 }
@@ -537,8 +533,16 @@ void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signa
     impl::singleton->device->submit(cmds, index, wait, signal, fence);
 }
 
-Pipeline make_pipeline(Pipeline::Config config) {
-    return impl::make_pipeline(move(config));
+impl::Pipeline make_pipeline(impl::Pipeline::Info info) {
+    return impl::make_pipeline(move(info));
+}
+
+Descriptor_Set make_set(Descriptor_Set_Layout& layout) {
+    return impl::singleton->descriptor_pool->make(layout, impl::singleton->state.frames_in_flight);
+}
+
+Shader_Loader make_shader_loader() {
+    return Shader_Loader{impl::singleton->device.dup()};
 }
 
 Arc<impl::Device, Alloc> get_device() {

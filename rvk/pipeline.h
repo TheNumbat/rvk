@@ -7,6 +7,7 @@
 
 #include "fwd.h"
 
+#include "bindings.h"
 #include "descriptors.h"
 
 namespace rvk::impl {
@@ -32,15 +33,32 @@ private:
     VkShaderModule shader = null;
 };
 
+template<VkShaderStageFlagBits stages, typename... Ts>
+struct Push_Constants {
+
+    operator Slice<VkPushConstantRange>() {
+        u64 offset = 0;
+        for(auto& range : range) {
+            range.offset = offset;
+            offset += range.size;
+        }
+        return Slice<VkPushConstantRange>{range};
+    }
+
+private:
+    static constexpr Array<VkPushConstantRange, sizeof...(Ts)> range{{stages, 0, sizeof(Ts)}...};
+};
+
 struct Pipeline {
     enum class Kind : u8 { graphics, compute, ray_tracing };
 
-    using Create_Info = Variant<VkGraphicsPipelineCreateInfo, VkComputePipelineCreateInfo,
-                                VkRayTracingPipelineCreateInfoKHR>;
-    struct Config {
+    using VkCreateInfo = Variant<VkGraphicsPipelineCreateInfo, VkComputePipelineCreateInfo,
+                                 VkRayTracingPipelineCreateInfoKHR>;
+
+    struct Info {
         Slice<VkPushConstantRange> push_constants;
         Slice<Descriptor_Set_Layout> descriptor_set_layouts;
-        Create_Info info;
+        VkCreateInfo info;
     };
 
     ~Pipeline();
@@ -53,13 +71,18 @@ struct Pipeline {
     void bind(Commands& cmds);
     void bind_set(Commands& cmds, Descriptor_Set& set, u64 frame_index, u32 set_index = 0);
 
+    template<typename T>
+    void push(Commands& cmds, const T& data) {
+        vkCmdPushConstants(cmds, layout, VK_SHADER_STAGE_ALL, 0, sizeof(T), &data);
+    }
+
     operator VkPipeline() const {
         return pipeline;
     }
 
 private:
-    explicit Pipeline(Arc<Device, Alloc> device, Config config);
-    friend Pipeline make_pipeline(Config config);
+    explicit Pipeline(Arc<Device, Alloc> device, Info info);
+    friend Pipeline make_pipeline(Info info);
 
     Arc<Device, Alloc> device;
 

@@ -76,9 +76,15 @@ template<Type_List L>
     requires(Reflect::All<Is_Binding, L>)
 Descriptor_Set_Layout make_layout();
 
-Pipeline make_pipeline(Pipeline::Config config);
+Descriptor_Set make_set(Descriptor_Set_Layout& layout);
+
+template<Type_List L, Binding... Binds>
+    requires(Same<L, List<Binds...>>)
+void write_set(Descriptor_Set& set, Binds&... binds);
 
 Shader_Loader make_shader_loader();
+
+Pipeline make_pipeline(Pipeline::Info info);
 
 // Command execution
 

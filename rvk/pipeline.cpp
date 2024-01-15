@@ -46,14 +46,14 @@ Shader& Shader::operator=(Shader&& src) {
     return *this;
 }
 
-Pipeline::Pipeline(Arc<Device, Alloc> D, Config config) : device(move(D)) {
+Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {
     Region(R) {
 
-        Vec<VkDescriptorSetLayout, Mregion<R>> layouts(config.descriptor_set_layouts.length());
-        Vec<VkPushConstantRange, Mregion<R>> push_constants(config.push_constants.length());
+        Vec<VkDescriptorSetLayout, Mregion<R>> layouts(info.descriptor_set_layouts.length());
+        Vec<VkPushConstantRange, Mregion<R>> push_constants(info.push_constants.length());
 
-        for(auto& set : config.descriptor_set_layouts) layouts.push(VkDescriptorSetLayout{set});
-        for(auto& pc : config.push_constants) push_constants.push(pc);
+        for(auto& set : info.descriptor_set_layouts) layouts.push(VkDescriptorSetLayout{set});
+        for(auto& pc : info.push_constants) push_constants.push(pc);
 
         VkPipelineLayoutCreateInfo layout_info = {};
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -64,25 +64,25 @@ Pipeline::Pipeline(Arc<Device, Alloc> D, Config config) : device(move(D)) {
 
         RVK_CHECK(vkCreatePipelineLayout(*device, &layout_info, null, &layout));
 
-        config.info.match(Overload{
+        info.info.match(Overload{
             [this](VkGraphicsPipelineCreateInfo& graphics) {
                 kind = Kind::graphics;
-                auto info = graphics;
-                info.layout = layout;
-                RVK_CHECK(vkCreateGraphicsPipelines(*device, null, 1, &info, null, &pipeline));
+                auto vk_info = graphics;
+                vk_info.layout = layout;
+                RVK_CHECK(vkCreateGraphicsPipelines(*device, null, 1, &vk_info, null, &pipeline));
             },
             [this](VkComputePipelineCreateInfo& compute) {
                 kind = Kind::compute;
-                auto info = compute;
-                info.layout = layout;
-                RVK_CHECK(vkCreateComputePipelines(*device, null, 1, &info, null, &pipeline));
+                auto vk_info = compute;
+                vk_info.layout = layout;
+                RVK_CHECK(vkCreateComputePipelines(*device, null, 1, &vk_info, null, &pipeline));
             },
             [this](VkRayTracingPipelineCreateInfoKHR& ray_tracing) {
                 kind = Kind::ray_tracing;
-                auto info = ray_tracing;
-                info.layout = layout;
-                RVK_CHECK(
-                    vkCreateRayTracingPipelinesKHR(*device, null, null, 1, &info, null, &pipeline));
+                auto vk_info = ray_tracing;
+                vk_info.layout = layout;
+                RVK_CHECK(vkCreateRayTracingPipelinesKHR(*device, null, null, 1, &vk_info, null,
+                                                         &pipeline));
             },
         });
     }

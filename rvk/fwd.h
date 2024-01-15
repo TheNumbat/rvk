@@ -48,6 +48,8 @@ struct Command_Pool;
 template<Queue_Family F>
 struct Command_Pool_Manager;
 struct Pipeline;
+template<VkShaderStageFlagBits stages, typename... Ts>
+struct Push_Constants;
 struct Shader;
 struct Sampler;
 struct Swapchain;
@@ -68,6 +70,7 @@ using impl::Fence;
 using impl::Image;
 using impl::Image_View;
 using impl::Pipeline;
+using impl::Push_Constants;
 using impl::Sem_Ref;
 using impl::Semaphore;
 using impl::Shader;

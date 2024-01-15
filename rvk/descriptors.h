@@ -32,7 +32,6 @@ private:
 
 struct Descriptor_Set {
 
-    explicit Descriptor_Set(Arc<Descriptor_Pool, Alloc> pool, Vec<VkDescriptorSet, Alloc> sets);
     ~Descriptor_Set();
 
     Descriptor_Set(const Descriptor_Set&) = delete;
@@ -47,6 +46,8 @@ struct Descriptor_Set {
     }
 
 private:
+    explicit Descriptor_Set(Arc<Descriptor_Pool, Alloc> pool, Vec<VkDescriptorSet, Alloc> sets);
+
     Arc<Descriptor_Pool, Alloc> pool;
     Vec<VkDescriptorSet, Alloc> sets;
 

@@ -6,7 +6,9 @@
 
 #include "fwd.h"
 
+#include "acceleration.h"
 #include "descriptors.h"
+#include "memory.h"
 
 namespace rvk {
 
@@ -248,7 +250,7 @@ template<Type_List L>
     requires(Reflect::All<Is_Binding, L>)
 Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device) {
     Region(R) {
-        Vec<VkDescriptorSetLayoutBinding, Mregion<R>> bindings(sizeof...(L));
+        Vec<VkDescriptorSetLayoutBinding, Mregion<R>> bindings(Reflect::List_Length<L>);
         Reflect::Iter<Make<R>, L>::apply(Make<R>{bindings});
         return Descriptor_Set_Layout{move(device), bindings.slice()};
     }

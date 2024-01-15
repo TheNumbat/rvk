@@ -12,9 +12,8 @@ using namespace rpp;
 
 static Shader compositor_v(Arc<Device, Alloc> device);
 static Shader compositor_f(Arc<Device, Alloc> device);
-static Pipeline::Config compositor_pipeline_config(Arc<Swapchain, Alloc>& swapchain,
-                                                   Descriptor_Set_Layout& layout, Shader& v,
-                                                   Shader& f);
+static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
+                                               Descriptor_Set_Layout& layout, Shader& v, Shader& f);
 static Slice<VkDescriptorSetLayoutBinding> compositor_ds_layout();
 
 static void swapchain_image_setup(Commands& commands, VkImage image);
@@ -197,7 +196,7 @@ Compositor::Compositor(Arc<Device, Alloc>& device, Arc<Descriptor_Pool, Alloc>& 
       ds_layout(device.dup(), compositor_ds_layout()),
       ds(pool->make(ds_layout, swapchain->frame_count())),
       sampler(device.dup(), VK_FILTER_NEAREST, VK_FILTER_NEAREST),
-      pipeline(make_pipeline(compositor_pipeline_config(swapchain, ds_layout, v, f))) {
+      pipeline(make_pipeline(compositor_pipeline_info(swapchain, ds_layout, v, f))) {
     info("[rvk] Created compositor.");
 }
 
@@ -259,9 +258,9 @@ static Slice<VkDescriptorSetLayoutBinding> compositor_ds_layout() {
     return Slice{&binding, 1};
 }
 
-static Pipeline::Config compositor_pipeline_config(Arc<Swapchain, Alloc>& swapchain,
-                                                   Descriptor_Set_Layout& layout, Shader& v,
-                                                   Shader& f) {
+static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
+                                               Descriptor_Set_Layout& layout, Shader& v,
+                                               Shader& f) {
 
     static Array<VkPipelineShaderStageCreateInfo, 2> stages;
     stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -353,10 +352,10 @@ static Pipeline::Config compositor_pipeline_config(Arc<Swapchain, Alloc>& swapch
     pipeline_info.pMultisampleState = &msaa_info;
     pipeline_info.pColorBlendState = &blend_info;
 
-    return Pipeline::Config{
+    return Pipeline::Info{
         .push_constants = {},
         .descriptor_set_layouts = Slice{&layout, 1},
-        .info = Pipeline::Create_Info{move(pipeline_info)},
+        .info = Pipeline::VkCreateInfo{move(pipeline_info)},
     };
 }
 

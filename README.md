@@ -9,14 +9,13 @@ Instead, rvk provides a convenient interface for modern desktop GPUs.
 It includes the following features:
 
 - RAII wrappers for Vulkan objects
-- GPU heap allocator and buffer sub-allocators
+- GPU heap allocator
 - Multiple frames in flight and resource deletion queue
-- Async GPU tasks for coroutines
+- Awaitable GPU tasks for coroutines
 - Swapchain management and compositor
-- Validation layer config and debug messaging
+- Validation config and debug messaging
 - Shader hot reloading
-- Graphics, compute, and transfer queue management
-- Multithreaded command pool management
+- Multithreaded command pool management for graphics, compute, and transfer queues
 - Compile-time descriptor set layout specifications
 - [Dear ImGui](https://github.com/ocornut/imgui) integration
 
@@ -74,8 +73,3 @@ make -j
 ```
 
 For faster parallel builds, you can instead generate [ninja](https://ninja-build.org/) build files with `cmake -G Ninja ..`.
-
-# ToDo
-
-Finish porting
-- [ ] descriptor gen
