@@ -14,7 +14,7 @@ using namespace rpp;
 
 struct TLAS {
 
-    using Insance = VkAccelerationStructureInstanceKHR;
+    using Instance = VkAccelerationStructureInstanceKHR;
 
     struct Staged {
     private:
