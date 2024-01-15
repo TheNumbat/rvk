@@ -16,6 +16,7 @@ struct Shader_Loader {
     using Token = u64;
     using Shader = impl::Shader;
 
+    Shader_Loader() = default;
     ~Shader_Loader() = default;
 
     Shader_Loader(const Shader_Loader&) = delete;

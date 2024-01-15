@@ -12,8 +12,7 @@ using namespace rpp;
 
 struct Descriptor_Set_Layout {
 
-    explicit Descriptor_Set_Layout(Arc<Device, Alloc> device,
-                                   Slice<VkDescriptorSetLayoutBinding> bindings);
+    Descriptor_Set_Layout() = default;
     ~Descriptor_Set_Layout();
 
     Descriptor_Set_Layout(const Descriptor_Set_Layout&) = delete;
@@ -26,12 +25,20 @@ struct Descriptor_Set_Layout {
     }
 
 private:
+    explicit Descriptor_Set_Layout(Arc<Device, Alloc> device,
+                                   Slice<VkDescriptorSetLayoutBinding> bindings);
+    friend struct Vk;
+
     Arc<Device, Alloc> device;
     VkDescriptorSetLayout layout = null;
+
+    friend struct Compositor;
+    friend struct Binder;
 };
 
 struct Descriptor_Set {
 
+    Descriptor_Set() = default;
     ~Descriptor_Set();
 
     Descriptor_Set(const Descriptor_Set&) = delete;
@@ -56,6 +63,7 @@ private:
 
 struct Descriptor_Pool {
 
+    Descriptor_Pool() = default;
     ~Descriptor_Pool();
 
     Descriptor_Pool(const Descriptor_Pool&) = delete;

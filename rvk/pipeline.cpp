@@ -112,10 +112,12 @@ Pipeline& Pipeline::operator=(Pipeline&& src) {
 }
 
 void Pipeline::bind(Commands& cmds) {
+    assert(pipeline);
     vkCmdBindPipeline(cmds, bind_point(kind), pipeline);
 }
 
 void Pipeline::bind_set(Commands& cmds, Descriptor_Set& set, u64 frame_index, u32 set_index) {
+    assert(pipeline);
     VkDescriptorSet s = set.get(frame_index);
     vkCmdBindDescriptorSets(cmds, bind_point(kind), layout, set_index, 1, &s, 0, null);
 }

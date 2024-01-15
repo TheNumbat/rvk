@@ -225,6 +225,10 @@ struct TLAS {
     }
 };
 
+} // namespace Bind
+
+namespace impl {
+
 template<Region R>
 struct Make {
     template<Binding B>
@@ -246,30 +250,33 @@ struct Write {
     Tuple<Binds...>& binds;
 };
 
-template<Type_List L>
-    requires(Reflect::All<Is_Binding, L>)
-Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device) {
-    Region(R) {
-        Vec<VkDescriptorSetLayoutBinding, Mregion<R>> bindings(Reflect::List_Length<L>);
-        Reflect::Iter<Make<R>, L>::apply(Make<R>{bindings});
-        return Descriptor_Set_Layout{move(device), bindings.slice()};
+struct Binder {
+    template<Type_List L>
+        requires(Reflect::All<rvk::Is_Binding, L>)
+    static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device) {
+        Region(R) {
+            Vec<VkDescriptorSetLayoutBinding, Mregion<R>> bindings(Reflect::List_Length<L>);
+            Reflect::Iter<Make<R>, L>::apply(Make<R>{bindings});
+            return Descriptor_Set_Layout{move(device), bindings.slice()};
+        }
     }
-}
 
-template<Type_List L, Binding... Binds>
-    requires Same<L, List<Binds...>>
-void write(Descriptor_Set& set, u64 frame_index, Binds&... binds) {
-    Region(R) {
-        Vec<VkWriteDescriptorSet, Mregion<R>> writes(sizeof...(Binds));
+    template<Type_List L, Binding... Binds>
+        requires Same<L, List<Binds...>>
+    static void write(Descriptor_Set& set, u64 frame_index, Binds&... binds) {
+        Region(R) {
+            Vec<VkWriteDescriptorSet, Mregion<R>> writes(sizeof...(Binds));
 
-        Tuple<Binds...> tuple{move(binds)...};
+            Tuple<Binds...> tuple{move(binds)...};
 
-        using Indices = Reflect::Enumerate<Binds...>;
-        Reflect::Iter<Write<R, Binds...>, Indices>::apply(Write<R, Binds...>{writes, tuple});
+            using Indices = Reflect::Enumerate<Binds...>;
+            Reflect::Iter<Write<R, Binds...>, Indices>::apply(Write<R, Binds...>{writes, tuple});
 
-        set.write(frame_index, writes.slice());
+            set.write(frame_index, writes.slice());
+        }
     }
-}
+};
 
-} // namespace Bind
+} // namespace impl
+
 } // namespace rvk

@@ -17,6 +17,8 @@ using namespace rpp;
 struct Shader {
 
     explicit Shader(Arc<Device, Alloc> device, Slice<u8> source);
+
+    Shader() = default;
     ~Shader();
 
     Shader(const Shader&) = delete;
@@ -61,6 +63,7 @@ struct Pipeline {
         VkCreateInfo info;
     };
 
+    Pipeline() = default;
     ~Pipeline();
 
     Pipeline(const Pipeline&) = delete;
@@ -82,7 +85,8 @@ struct Pipeline {
 
 private:
     explicit Pipeline(Arc<Device, Alloc> device, Info info);
-    friend Pipeline make_pipeline(Info info);
+    friend struct Compositor;
+    friend struct Vk;
 
     Arc<Device, Alloc> device;
 

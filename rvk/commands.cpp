@@ -50,14 +50,17 @@ Fence& Fence::operator=(Fence&& src) {
 }
 
 void Fence::wait() const {
+    assert(fence);
     RVK_CHECK(vkWaitForFences(*device, 1, &fence, VK_TRUE, UINT64_MAX));
 }
 
 void Fence::reset() {
+    assert(fence);
     RVK_CHECK(vkResetFences(*device, 1, &fence));
 }
 
 Async::Event Fence::event() const {
+    assert(fence);
 #ifdef RPP_OS_WINDOWS
     HANDLE handle = null;
     VkFenceGetWin32HandleInfoKHR info = {};
@@ -78,6 +81,7 @@ Async::Event Fence::event() const {
 }
 
 bool Fence::ready() const {
+    assert(fence);
     VkResult res = vkGetFenceStatus(*device, fence);
     if(res == VK_SUCCESS) return true;
     if(res == VK_NOT_READY) return false;
@@ -86,10 +90,8 @@ bool Fence::ready() const {
 }
 
 Semaphore::Semaphore(Arc<Device, Alloc> D) : device(move(D)) {
-
     VkSemaphoreCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
     RVK_CHECK(vkCreateSemaphore(*device, &info, null, &semaphore));
 }
 

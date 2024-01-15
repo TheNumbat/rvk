@@ -54,6 +54,8 @@ struct Shader;
 struct Sampler;
 struct Swapchain;
 struct Compositor;
+struct Binder;
+struct Vk;
 
 String_View describe(VkResult result);
 String_View describe(VkObjectType object);

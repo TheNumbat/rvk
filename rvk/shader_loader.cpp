@@ -6,10 +6,12 @@
 namespace rvk {
 
 impl::Shader& Shader_Loader::get(Token token) {
+    assert(device);
     return shaders.get(token).first;
 }
 
 Shader_Loader::Token Shader_Loader::compile(String_View path) {
+    assert(device);
 
     if(Opt<Vec<u8, Files::Alloc>> data = Files::read(path)) {
 
@@ -30,6 +32,7 @@ Shader_Loader::Token Shader_Loader::compile(String_View path) {
 
 Async::Task<Shader_Loader::Token> Shader_Loader::compile_async(Async::Pool<>& pool,
                                                                String_View path) {
+    assert(device);
 
     if(Opt<Vec<u8, Files::Alloc>> data = co_await Async::read(pool, path)) {
 
@@ -50,6 +53,8 @@ Async::Task<Shader_Loader::Token> Shader_Loader::compile_async(Async::Pool<>& po
 }
 
 void Shader_Loader::try_reload() {
+    assert(device);
+
     Thread::Lock lock{mutex};
 
     Region(R) {
@@ -73,6 +78,8 @@ void Shader_Loader::try_reload() {
 
 void Shader_Loader::on_reload(Slice<Shader_Loader::Token> tokens,
                               Function<void(Shader_Loader&)> callback) {
+    assert(device);
+
     Thread::Lock lock{mutex};
 
     Reload_Token reload_token = next_reload_token++;

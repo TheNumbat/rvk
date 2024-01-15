@@ -47,10 +47,9 @@ private:
 };
 
 struct Frame {
-    explicit Frame(Arc<Device, Alloc> device,
-                   Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& graphics_command_pool)
-        : fence{device.dup()}, cmds{graphics_command_pool->make()}, available{device.dup()},
-          complete{device.dup()} {
+    explicit Frame(Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& graphics_command_pool)
+        : fence{make_fence()}, cmds{graphics_command_pool->make()}, available{make_semaphore()},
+          complete{make_semaphore()} {
     }
     ~Frame() = default;
 
@@ -134,6 +133,12 @@ struct Vk {
     void wait_idle();
     void begin_frame();
     void end_frame(Image_View& output);
+
+    Fence make_fence();
+    Semaphore make_semaphore();
+    Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
+    Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets);
+    Pipeline make_pipeline(Pipeline::Info info);
 };
 
 static Opt<Vk> singleton;
@@ -177,7 +182,7 @@ Vk::Vk(Config config) {
 
         frames.reserve(config.frames_in_flight);
         for(u32 i = 0; i < config.frames_in_flight; i++) {
-            frames.emplace(device.dup(), graphics_command_pool);
+            frames.emplace(graphics_command_pool);
             deletion_queues.emplace();
         }
 
@@ -206,7 +211,6 @@ void Vk::imgui() {
 
     using namespace ImGui;
 
-    Begin("rvk info");
     Text("Frame: %u | Image: %u", state.frame_index, state.swapchain_index);
     Text("Swapchain images: %u | Max frames: %u", swapchain->slot_count(), state.frames_in_flight);
     Text("Extent: %ux%u", swapchain->extent().width, swapchain->extent().height);
@@ -231,7 +235,6 @@ void Vk::imgui() {
         instance->imgui();
         TreePop();
     }
-    End();
 }
 
 void Vk::destroy_imgui() {
@@ -417,7 +420,23 @@ void Vk::recreate_swapchain() {
     }
 }
 
-Pipeline make_pipeline(Pipeline::Info info) {
+Fence Vk::make_fence() {
+    return Fence{device.dup()};
+}
+
+Semaphore Vk::make_semaphore() {
+    return Semaphore{device.dup()};
+}
+
+Opt<TLAS::Staged> Vk::make_tlas(Buffer& instances, u32 n_instances) {
+    return TLAS::make(device_memory.dup(), instances, n_instances);
+}
+
+Opt<BLAS::Staged> Vk::make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets) {
+    return BLAS::make(device_memory.dup(), geometry, move(offsets));
+}
+
+Pipeline Vk::make_pipeline(Pipeline::Info info) {
     return Pipeline{singleton->device.dup(), move(info)};
 }
 
@@ -482,11 +501,11 @@ void drop(Finalizer f) {
 }
 
 Fence make_fence() {
-    return Fence{impl::singleton->device.dup()};
+    return impl::singleton->make_fence();
 }
 
 Semaphore make_semaphore() {
-    return Semaphore{impl::singleton->device.dup()};
+    return impl::singleton->make_semaphore();
 }
 
 Commands make_commands(Queue_Family family) {
@@ -511,11 +530,11 @@ Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usag
 }
 
 Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances) {
-    return TLAS::make(impl::singleton->device_memory.dup(), instances, n_instances);
+    return impl::singleton->make_tlas(instances, n_instances);
 }
 
 Opt<BLAS::Staged> make_blas(Buffer& geometry, Vec<BLAS::Offsets, Alloc> offsets) {
-    return BLAS::make(impl::singleton->device_memory.dup(), geometry, move(offsets));
+    return impl::singleton->make_blas(geometry, move(offsets));
 }
 
 void submit(Commands& cmds, u32 index) {
@@ -535,7 +554,7 @@ void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signa
 }
 
 impl::Pipeline make_pipeline(impl::Pipeline::Info info) {
-    return impl::make_pipeline(move(info));
+    return impl::singleton->make_pipeline(move(info));
 }
 
 Descriptor_Set make_set(Descriptor_Set_Layout& layout) {

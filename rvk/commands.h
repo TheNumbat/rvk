@@ -8,6 +8,7 @@
 #include "fwd.h"
 
 #include "device.h"
+#include "memory.h"
 
 namespace rvk::impl {
 
@@ -15,7 +16,7 @@ using namespace rpp;
 
 struct Fence {
 
-    explicit Fence(Arc<Device, Alloc> device);
+    Fence() = default;
     ~Fence();
 
     Fence(const Fence&) = delete;
@@ -33,6 +34,9 @@ struct Fence {
     Async::Event event() const;
 
 private:
+    explicit Fence(Arc<Device, Alloc> device);
+    friend struct Vk;
+
     Arc<Device, Alloc> device;
     VkFence fence = null;
 };
@@ -46,7 +50,7 @@ struct Sem_Ref {
 
 struct Semaphore {
 
-    explicit Semaphore(Arc<Device, Alloc> device);
+    Semaphore() = default;
     ~Semaphore();
 
     Semaphore(const Semaphore&) = delete;
@@ -59,12 +63,16 @@ struct Semaphore {
     }
 
 private:
+    explicit Semaphore(Arc<Device, Alloc> device);
+    friend struct Vk;
+
     Arc<Device, Alloc> device;
     VkSemaphore semaphore = null;
 };
 
 struct Commands {
 
+    Commands() = default;
     ~Commands();
 
     Commands(const Commands&) = delete;

@@ -61,6 +61,7 @@ private:
 
 struct Image {
 
+    Image() = default;
     ~Image();
 
     Image(const Image& src) = delete;
@@ -101,6 +102,8 @@ private:
 struct Image_View {
 
     explicit Image_View(Image& image, VkImageAspectFlags aspect);
+
+    Image_View() = default;
     ~Image_View();
 
     Image_View(const Image_View& src) = delete;
@@ -125,6 +128,8 @@ private:
 struct Sampler {
 
     explicit Sampler(Arc<Device, Alloc> device, VkFilter min, VkFilter mag);
+
+    Sampler() = default;
     ~Sampler();
 
     Sampler(const Sampler& src) = delete;
@@ -143,10 +148,12 @@ private:
 
 struct Buffer {
 
+    Buffer() = default;
     ~Buffer();
 
     Buffer(const Buffer& src) = delete;
     Buffer& operator=(const Buffer& src) = delete;
+
     Buffer(Buffer&& src);
     Buffer& operator=(Buffer&& src);
 

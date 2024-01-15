@@ -13,6 +13,9 @@ namespace rvk::impl {
 using namespace rpp;
 
 struct TLAS {
+
+    using Insance = VkAccelerationStructureInstanceKHR;
+
     struct Staged {
     private:
         explicit Staged(Buffer result, Buffer scratch, Buffer& instances, u32 n_instances,
@@ -31,6 +34,7 @@ struct TLAS {
         friend struct TLAS;
     };
 
+    TLAS() = default;
     ~TLAS();
 
     TLAS(const TLAS& src) = delete;
@@ -38,10 +42,6 @@ struct TLAS {
 
     TLAS(TLAS&& src);
     TLAS& operator=(TLAS&& src);
-
-    using Instance = VkAccelerationStructureInstanceKHR;
-
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& instances, u32 n_instances);
 
     static TLAS build(Commands& cmds, Staged gpu_data);
 
@@ -52,6 +52,9 @@ struct TLAS {
 private:
     explicit TLAS(Arc<Device_Memory, Alloc> memory, Buffer structure,
                   VkAccelerationStructureKHR accel);
+    friend struct Vk;
+
+    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& instances, u32 n_instances);
 
     Arc<Device_Memory, Alloc> memory;
 
@@ -87,15 +90,13 @@ struct BLAS {
         friend struct BLAS;
     };
 
+    BLAS() = default;
     ~BLAS();
 
     BLAS(const BLAS& src) = delete;
     BLAS& operator=(const BLAS& src) = delete;
     BLAS(BLAS&& src);
     BLAS& operator=(BLAS&& src);
-
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& geometry,
-                            Vec<Offsets, Alloc> offsets);
 
     static BLAS build(Commands& cmds, Staged buffers);
 
@@ -108,6 +109,10 @@ struct BLAS {
 private:
     explicit BLAS(Arc<Device_Memory, Alloc> memory, Buffer structure,
                   VkAccelerationStructureKHR accel);
+    friend struct Vk;
+
+    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& geometry,
+                            Vec<Offsets, Alloc> offsets);
 
     Arc<Device_Memory, Alloc> memory;
 

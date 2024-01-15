@@ -161,7 +161,7 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
 
     RVK_CHECK(vkBindBufferMemory2(*device, 1, &bind));
 
-    return Opt{Buffer{Arc<Device_Memory, Alloc>::from_this(this), *address, buffer}};
+    return Opt<Buffer>{Buffer{Arc<Device_Memory, Alloc>::from_this(this), *address, buffer}};
 }
 
 Image::Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
@@ -199,6 +199,7 @@ Image_View Image::view(VkImageAspectFlags aspect) {
 }
 
 void Image::setup(Commands& commands, VkImageLayout layout) {
+    assert(image);
     transition(commands, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, layout,
                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
                VK_ACCESS_2_NONE, VK_ACCESS_2_NONE);
@@ -208,7 +209,7 @@ void Image::transition(Commands& commands, VkImageAspectFlags aspect, VkImageLay
                        VkImageLayout dst_layout, VkPipelineStageFlags2 src_stage,
                        VkPipelineStageFlags2 dst_stage, VkAccessFlags2 src_access,
                        VkAccessFlags2 dst_access) {
-
+    assert(image);
     VkImageMemoryBarrier2 barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
     barrier.oldLayout = src_layout;
@@ -357,11 +358,14 @@ u8* Buffer::map() {
 }
 
 void Buffer::write(Slice<u8> data, u64 offset) {
+    assert(buffer);
     assert(data.length() + offset <= address->length());
+
     Libc::memcpy(map() + offset, data.data(), data.length());
 }
 
 void Buffer::copy_from(Commands& commands, Buffer& from) {
+    assert(buffer);
     assert(from.length() <= address->length());
 
     VkBufferCopy2 region = {};
@@ -381,6 +385,7 @@ void Buffer::copy_from(Commands& commands, Buffer& from) {
 }
 
 void Buffer::copy_from(Commands& commands, Buffer& from, u64 offset, u64 size) {
+    assert(buffer);
     assert(size + offset <= address->length());
 
     VkBufferCopy2 region = {};
@@ -400,6 +405,7 @@ void Buffer::copy_from(Commands& commands, Buffer& from, u64 offset, u64 size) {
 }
 
 void Buffer::move_from(Commands& commands, Buffer from) {
+    assert(buffer);
     copy_from(commands, from);
     commands.attach(move(from));
 }
