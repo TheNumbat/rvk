@@ -150,7 +150,7 @@ Assure clang-17 and cmake 3.17 (or newer) are installed.
 ```bash
 mkdir build
 cd build
-CXX=clang++-17 cmake .. -DRVK_TEST=ON
+CXX=clang++-17 cmake ..
 make -j
 ```
 
