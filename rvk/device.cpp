@@ -517,14 +517,16 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
 
             if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
                                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+                                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                                                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT)) {
                 host_memory_index = *idx;
             } else {
                 die("[rvk] No host visible heap found.");
             }
 
-            info("[rvk] Found device and host heaps (%mb, %mb).",
-                 heap_size(Heap::device) / Math::MB(1), heap_size(Heap::host) / Math::MB(1));
+            info("[rvk] Found device and host heaps (%: %mb, %: %mb).", device_memory_index,
+                 heap_size(Heap::device) / Math::MB(1), host_memory_index,
+                 heap_size(Heap::host) / Math::MB(1));
         }
 
         volkLoadDevice(device);
