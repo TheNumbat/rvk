@@ -1,7 +1,5 @@
 # rvk
 
-(WIP; refactoring into new repo)
-
 [rpp](https://github.com/TheNumbat/rpp)-based Vulkan 1.3 abstraction layer.
 
 rvk does not seek to redefine the Vulkan API, nor expose all of its configurability.
