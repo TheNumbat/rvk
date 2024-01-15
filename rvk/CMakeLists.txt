@@ -53,6 +53,12 @@ if(NOT TARGET rpp)
     message(FATAL_ERROR "rpp could not be found. rpp must be built before rvk.")
 endif()
 
+set_property(TARGET rvk PROPERTY INTERPROCEDURAL_OPTIMIZATION
+    $<$<CONFIG:Debug>:FALSE>
+    $<$<CONFIG:RelWithDebInfo>:FALSE>
+    $<$<CONFIG:Release>:TRUE>
+    $<$<CONFIG:MinSizeRel>:TRUE>)
+
 target_link_libraries(rvk PRIVATE rpp volk ImGui)
 target_include_directories(rvk PRIVATE "../deps/" ${RPP_INCLUDE_DIRS})
 

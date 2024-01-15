@@ -14,7 +14,7 @@ Device_Memory::Device_Memory(Arc<Physical_Device, Alloc>& physical_device, Arc<D
 
     VkMemoryAllocateFlagsInfo flags = {};
     flags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
-    flags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+    if(location == Heap::device) flags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
     VkMemoryAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
