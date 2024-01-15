@@ -124,7 +124,6 @@ static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
     features2.features.depthBounds = VK_TRUE;
     features2.features.wideLines = VK_TRUE;
     features2.features.largePoints = VK_TRUE;
-    features2.features.alphaToOne = VK_TRUE;
     features2.features.samplerAnisotropy = VK_TRUE;
     features2.features.occlusionQueryPrecise = VK_TRUE;
     features2.features.pipelineStatisticsQuery = VK_TRUE;
