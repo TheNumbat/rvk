@@ -60,7 +60,6 @@ static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
     vk12_features.drawIndirectCount = VK_TRUE;
     vk12_features.storageBuffer8BitAccess = VK_TRUE;
     vk12_features.uniformAndStorageBuffer8BitAccess = VK_TRUE;
-    vk12_features.storagePushConstant8 = VK_TRUE;
     vk12_features.shaderBufferInt64Atomics = VK_TRUE;
     vk12_features.shaderSharedInt64Atomics = VK_TRUE;
     vk12_features.shaderFloat16 = VK_TRUE;
@@ -86,14 +85,12 @@ static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
     vk12_features.bufferDeviceAddress = VK_TRUE;
     vk12_features.vulkanMemoryModel = VK_TRUE;
     vk12_features.vulkanMemoryModelDeviceScope = VK_TRUE;
-    vk12_features.vulkanMemoryModelAvailabilityVisibilityChains = VK_TRUE;
 
     static VkPhysicalDeviceVulkan11Features vk11_features = {};
     vk11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
     vk11_features.pNext = &vk12_features;
     vk11_features.storageBuffer16BitAccess = VK_TRUE;
     vk11_features.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-    vk11_features.storagePushConstant16 = VK_TRUE;
     vk11_features.variablePointersStorageBuffer = VK_TRUE;
     vk11_features.variablePointers = VK_TRUE;
 
