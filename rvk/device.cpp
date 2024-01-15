@@ -209,7 +209,8 @@ Opt<u32> Physical_Device::queue_index(Queue_Family f) {
         case Queue_Family::compute:
             return (flags & VK_QUEUE_COMPUTE_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT);
         case Queue_Family::transfer:
-            return (flags & VK_QUEUE_TRANSFER_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT);
+            return (flags & VK_QUEUE_TRANSFER_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT) &&
+                   !(flags & VK_QUEUE_COMPUTE_BIT);
         default: RPP_UNREACHABLE;
         }
     };
