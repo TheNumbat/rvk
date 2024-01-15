@@ -17,13 +17,13 @@ using namespace rpp;
 template<Type_List L>
     requires(Reflect::All<Is_Binding, L>)
 Descriptor_Set_Layout make_layout() {
-    impl::Binder::make<L>(impl::get_device());
+    return impl::Binder::template make<L>(impl::get_device());
 }
 
 template<Type_List L, Binding... Binds>
     requires(Same<L, List<Binds...>>)
 void write_set(Descriptor_Set& set, Binds&... binds) {
-    impl::Binder::write(set, frame(), binds...);
+    impl::Binder::template write<L, Binds...>(set, frame(), binds...);
 }
 
 template<typename F>

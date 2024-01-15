@@ -17,6 +17,15 @@ struct TLAS {
     using Instance = VkAccelerationStructureInstanceKHR;
 
     struct Staged {
+        Staged() = default;
+        ~Staged() = default;
+
+        Staged(const Staged& src) = delete;
+        Staged& operator=(const Staged& src) = delete;
+
+        Staged(Staged&& src) = default;
+        Staged& operator=(Staged&& src) = default;
+
     private:
         explicit Staged(Buffer result, Buffer scratch, Buffer& instances, u32 n_instances,
                         u64 result_size, Arc<Device_Memory, Alloc> memory)
@@ -26,7 +35,7 @@ struct TLAS {
 
         Buffer result;
         Buffer scratch;
-        Buffer& instances;
+        Ref<Buffer> instances;
         u32 n_instances = 0;
         u64 result_size = 0;
         Arc<Device_Memory, Alloc> memory;
@@ -73,6 +82,15 @@ struct BLAS {
     };
 
     struct Staged {
+        Staged() = default;
+        ~Staged() = default;
+
+        Staged(const Staged& src) = delete;
+        Staged& operator=(const Staged& src) = delete;
+
+        Staged(Staged&& src) = default;
+        Staged& operator=(Staged&& src) = default;
+
     private:
         explicit Staged(Buffer result, Buffer scratch, Buffer& geometry, u64 result_size,
                         Vec<Offsets, Alloc> offsets, Arc<Device_Memory, Alloc> memory)
@@ -82,7 +100,7 @@ struct BLAS {
 
         Buffer result;
         Buffer scratch;
-        Buffer& geometry;
+        Ref<Buffer> geometry;
         u64 result_size = 0;
         Vec<Offsets, Alloc> offsets;
         Arc<Device_Memory, Alloc> memory;

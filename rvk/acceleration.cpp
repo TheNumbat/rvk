@@ -80,6 +80,7 @@ Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& instances
 TLAS TLAS::build(Commands& cmds, Staged buffers) {
 
     // Create acceleration structure
+    assert(buffers.instances);
 
     VkAccelerationStructureKHR acceleration_structure = null;
 
@@ -102,7 +103,7 @@ TLAS TLAS::build(Commands& cmds, Staged buffers) {
     geom.geometry.instances.sType =
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
     geom.geometry.instances.arrayOfPointers = VK_FALSE;
-    geom.geometry.instances.data.deviceAddress = buffers.instances.gpu_address();
+    geom.geometry.instances.data.deviceAddress = buffers.instances->gpu_address();
 
     VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
     build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -230,6 +231,8 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& data,
 
 BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
+    assert(buffers.geometry);
+
     // Create acceleration structure
 
     VkAccelerationStructureKHR acceleration_structure = null;
@@ -262,7 +265,7 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
         VkAccelerationStructureBuildRangeInfoKHR range = {};
 
-        u64 base_data = buffers.geometry.gpu_address();
+        u64 base_data = buffers.geometry->gpu_address();
         for(auto& offset : buffers.offsets) {
             geom.geometry.triangles.vertexData.deviceAddress = base_data + offset.vertex;
             geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;

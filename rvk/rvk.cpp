@@ -440,6 +440,10 @@ Pipeline Vk::make_pipeline(Pipeline::Info info) {
     return Pipeline{singleton->device.dup(), move(info)};
 }
 
+Arc<Device, Alloc> get_device() {
+    return singleton->device.dup();
+}
+
 } // namespace impl
 
 bool startup(Config config) {
@@ -563,10 +567,6 @@ Descriptor_Set make_set(Descriptor_Set_Layout& layout) {
 
 Shader_Loader make_shader_loader() {
     return Shader_Loader{impl::singleton->device.dup()};
-}
-
-Arc<impl::Device, Alloc> get_device() {
-    return impl::singleton->device.dup();
 }
 
 } // namespace rvk
