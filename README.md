@@ -69,20 +69,22 @@ i32 main() {
             },
     });
 
-    rvk::Drop<rvk::Image> target{move(*rvk::make_image({1280, 720, 1}, VK_FORMAT_R8G8B8A8_UNORM,
-                                                        VK_IMAGE_USAGE_SAMPLED_BIT))};
-    rvk::sync([&](rvk::Commands& cmds) {
-        target->setup(cmds, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    });
+    {
+        rvk::Drop<rvk::Image> target{move(*rvk::make_image({1280, 720, 1}, VK_FORMAT_R8G8B8A8_UNORM,
+                                                            VK_IMAGE_USAGE_SAMPLED_BIT))};
+        rvk::sync([&](rvk::Commands& cmds) {
+            target->setup(cmds, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        });
 
-    rvk::Drop<rvk::Image_View> target_view{target->view(VK_IMAGE_ASPECT_COLOR_BIT)};
+        rvk::Drop<rvk::Image_View> target_view{target->view(VK_IMAGE_ASPECT_COLOR_BIT)};
 
-    while(/* running */) {
-        rvk::begin_frame();
+        while(/* User hasn't quit */) {
+            rvk::begin_frame();
 
-        // Do your rendering...
+            // Do your rendering...
 
-        rvk::end_frame(target_view):
+            rvk::end_frame(target_view):
+        }
     }
 
     rvk::shutdown();
