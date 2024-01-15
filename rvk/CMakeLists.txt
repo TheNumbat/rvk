@@ -71,6 +71,7 @@ if(MSVC)
         $<$<CONFIG:Release>:_NO_DEBUG_HEAP=1>
         $<$<CONFIG:MinSizeRel>:_NO_DEBUG_HEAP=1>
     )
+    target_link_options(rvk PRIVATE /NODEFAULTLIB:MSVCRT)
     target_compile_options(rvk PRIVATE /arch:AVX2 /MP /W4 /GR- /GS- /EHa- /wd4201)
 
 elseif(CLANG)
