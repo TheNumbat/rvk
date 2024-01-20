@@ -35,10 +35,10 @@ private:
     VkShaderModule shader = null;
 };
 
-template<u32 stages, typename... Ts>
+template<u32 S, typename... Ts>
 struct Push_Constants {
 
-    static constexpr VkShaderStageFlagBits stages = static_cast<VkShaderStageFlagBits>(stages);
+    static constexpr VkShaderStageFlagBits stages = static_cast<VkShaderStageFlagBits>(S);
 
     operator Slice<VkPushConstantRange>() {
         u32 offset = 0;
