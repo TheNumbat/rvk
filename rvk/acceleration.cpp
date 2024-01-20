@@ -31,7 +31,7 @@ TLAS& TLAS::operator=(TLAS&& src) {
     return *this;
 }
 
-Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& instances, u32 n_instances) {
+Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer instances, u32 n_instances) {
 
     assert(instances.length());
 
@@ -73,14 +73,13 @@ Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer& instances
                                                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     if(!scratch) return {};
 
-    return Opt<Staged>{Staged{move(*structure_buf), move(*scratch), instances, n_instances,
+    return Opt<Staged>{Staged{move(*structure_buf), move(*scratch), move(instances), n_instances,
                               build_sizes.accelerationStructureSize, move(memory)}};
 }
 
 TLAS TLAS::build(Commands& cmds, Staged buffers) {
 
     // Create acceleration structure
-    assert(buffers.instances);
 
     VkAccelerationStructureKHR acceleration_structure = null;
 
@@ -103,7 +102,7 @@ TLAS TLAS::build(Commands& cmds, Staged buffers) {
     geom.geometry.instances.sType =
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
     geom.geometry.instances.arrayOfPointers = VK_FALSE;
-    geom.geometry.instances.data.deviceAddress = buffers.instances->gpu_address();
+    geom.geometry.instances.data.deviceAddress = buffers.instances.gpu_address();
 
     VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
     build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -116,6 +115,7 @@ TLAS TLAS::build(Commands& cmds, Staged buffers) {
     build_info.dstAccelerationStructure = acceleration_structure;
 
     cmds.attach(move(buffers.scratch));
+    cmds.attach(move(buffers.instances));
 
     VkAccelerationStructureBuildRangeInfoKHR offset = {};
     offset.primitiveCount = buffers.n_instances;
@@ -189,6 +189,8 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
             geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;
             if(offset.transform) {
                 geom.geometry.triangles.transformData.deviceAddress = base_data + *offset.transform;
+            } else {
+                geom.geometry.triangles.transformData.deviceAddress = 0;
             }
             geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices);
 

@@ -60,10 +60,12 @@ auto async(Async::Pool<>& pool, F&& f, Queue_Family family, u32 index)
         forward<F>(f)(cmds);
         submit(cmds, index, fence);
         co_await pool.event(fence.event());
+        fence.wait();
     } else {
         auto ret = forward<F>(f)(cmds);
         submit(cmds, index, fence);
         co_await pool.event(fence.event());
+        fence.wait();
         co_return ret;
     }
 }

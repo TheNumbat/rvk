@@ -237,7 +237,7 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
     info.pColorAttachments = &swapchain_attachment;
 
     pipeline.bind(cmds);
-    pipeline.bind_set(cmds, ds, frame_index);
+    pipeline.bind_set(cmds, ds);
 
     vkCmdBeginRendering(cmds, &info);
     vkCmdDraw(cmds, 4, 1, 0, 0);
@@ -352,9 +352,12 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
     pipeline_info.pMultisampleState = &msaa_info;
     pipeline_info.pColorBlendState = &blend_info;
 
+    static Ref<Descriptor_Set_Layout> layout_ref;
+    layout_ref = Ref{layout};
+
     return Pipeline::Info{
         .push_constants = {},
-        .descriptor_set_layouts = Slice{&layout, 1},
+        .descriptor_set_layouts = Slice{&layout_ref, 1},
         .info = Pipeline::VkCreateInfo{move(pipeline_info)},
     };
 }

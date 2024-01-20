@@ -147,6 +147,8 @@ void Commands::reset() {
 
     RVK_CHECK(vkResetCommandBuffer(buffer, 0));
 
+    transient_buffers.clear();
+
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;

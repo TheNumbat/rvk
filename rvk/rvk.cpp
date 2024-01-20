@@ -136,7 +136,7 @@ struct Vk {
 
     Fence make_fence();
     Semaphore make_semaphore();
-    Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
+    Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances);
     Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
     Pipeline make_pipeline(Pipeline::Info info);
 };
@@ -430,8 +430,8 @@ Semaphore Vk::make_semaphore() {
     return Semaphore{device.dup()};
 }
 
-Opt<TLAS::Staged> Vk::make_tlas(Buffer& instances, u32 n_instances) {
-    return TLAS::make(device_memory.dup(), instances, n_instances);
+Opt<TLAS::Staged> Vk::make_tlas(Buffer instances, u32 n_instances) {
+    return TLAS::make(device_memory.dup(), move(instances), n_instances);
 }
 
 Opt<BLAS::Staged> Vk::make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
@@ -543,8 +543,8 @@ Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usag
     return impl::singleton->device_memory->make(extent, format, usage);
 }
 
-Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances) {
-    return impl::singleton->make_tlas(instances, n_instances);
+Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances) {
+    return impl::singleton->make_tlas(move(instances), n_instances);
 }
 
 Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
@@ -575,8 +575,8 @@ Descriptor_Set make_set(Descriptor_Set_Layout& layout) {
     return impl::singleton->descriptor_pool->make(layout, impl::singleton->state.frames_in_flight);
 }
 
-Shader_Loader make_shader_loader() {
-    return Shader_Loader{impl::singleton->device.dup()};
+Box<Shader_Loader, Alloc> make_shader_loader() {
+    return Box<Shader_Loader, Alloc>::make(impl::singleton->device.dup());
 }
 
 } // namespace rvk

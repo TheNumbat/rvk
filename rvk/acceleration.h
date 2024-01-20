@@ -27,15 +27,15 @@ struct TLAS {
         Staged& operator=(Staged&& src) = default;
 
     private:
-        explicit Staged(Buffer result, Buffer scratch, Buffer& instances, u32 n_instances,
+        explicit Staged(Buffer result, Buffer scratch, Buffer instances, u32 n_instances,
                         u64 result_size, Arc<Device_Memory, Alloc> memory)
-            : result(move(result)), scratch(move(scratch)), instances(instances),
+            : result(move(result)), scratch(move(scratch)), instances(move(instances)),
               n_instances(n_instances), result_size(result_size), memory(move(memory)) {
         }
 
         Buffer result;
         Buffer scratch;
-        Ref<Buffer> instances;
+        Buffer instances;
         u32 n_instances = 0;
         u64 result_size = 0;
         Arc<Device_Memory, Alloc> memory;
@@ -63,7 +63,7 @@ private:
                   VkAccelerationStructureKHR accel);
     friend struct Vk;
 
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer& instances, u32 n_instances);
+    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer instances, u32 n_instances);
 
     Arc<Device_Memory, Alloc> memory;
 

@@ -39,7 +39,7 @@ private:
 
     explicit Shader_Loader(Arc<Device, Alloc> device) : device(move(device)) {
     }
-    friend Shader_Loader make_shader_loader();
+    friend struct Box<Shader_Loader, Alloc>;
 
     Arc<Device, Alloc> device;
     Thread::Atomic next_token{1};
