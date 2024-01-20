@@ -40,8 +40,6 @@ If you're already using [rpp](https://github.com/TheNumbat/rpp), also set the fo
 set(RVK_HAS_RPP TRUE)
 ```
 
-Alternatively, to start an rvk project from scratch, you can fork [rpp_example_project/rvk](https://github.com/TheNumbat/rpp_example_project/tree/rvk).
-
 ## Examples
 
 ### Main Loop
