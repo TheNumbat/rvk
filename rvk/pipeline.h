@@ -35,20 +35,21 @@ private:
     VkShaderModule shader = null;
 };
 
-template<VkShaderStageFlagBits stages, typename... Ts>
+template<u32 stages, typename... Ts>
 struct Push_Constants {
 
     operator Slice<VkPushConstantRange>() {
-        u64 offset = 0;
-        for(auto& range : range) {
-            range.offset = offset;
-            offset += range.size;
+        u32 offset = 0;
+        for(auto& r : range) {
+            r.offset = offset;
+            offset += r.size;
         }
         return Slice<VkPushConstantRange>{range};
     }
 
 private:
-    static constexpr Array<VkPushConstantRange, sizeof...(Ts)> range{{stages, 0, sizeof(Ts)}...};
+    static inline Array<VkPushConstantRange, sizeof...(Ts)> range{
+        VkPushConstantRange{stages, 0, sizeof(Ts)}...};
 };
 
 struct Pipeline {

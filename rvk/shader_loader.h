@@ -31,7 +31,7 @@ struct Shader_Loader {
     Async::Task<Token> compile_async(Async::Pool<>& pool, String_View path);
 
     void try_reload();
-    void on_reload(Slice<Token> shaders, Function<void(Shader_Loader&)> callback);
+    void on_reload(Slice<Token> shaders, FunctionN<16, void(Shader_Loader&)> callback);
 
 private:
     using Device = impl::Device;
@@ -48,7 +48,7 @@ private:
     Thread::Mutex mutex;
     Map<Token, Pair<Shader, Files::Write_Watcher>, Alloc> shaders;
     Map<Token, Reload_Token, Alloc> reloads;
-    Map<Reload_Token, Function<void(Shader_Loader&)>, Alloc> callbacks;
+    Map<Reload_Token, FunctionN<16, void(Shader_Loader&)>, Alloc> callbacks;
 };
 
 } // namespace rvk

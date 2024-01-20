@@ -48,7 +48,7 @@ struct Command_Pool;
 template<Queue_Family F>
 struct Command_Pool_Manager;
 struct Pipeline;
-template<VkShaderStageFlagBits stages, typename... Ts>
+template<u32 stages, typename... Ts>
 struct Push_Constants;
 struct Shader;
 struct Sampler;

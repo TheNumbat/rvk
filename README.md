@@ -103,8 +103,8 @@ i32 main() {
 
     rvk::Shader_Loader loader = rvk::make_shader_loader();
 
-    auto vertex = loader.load("shader.vert.spv"_v);
-    auto fragment = loader.load("shader.frag.spv"_v);
+    auto vertex = loader.compile("shader.vert.spv"_v);
+    auto fragment = loader.compile("shader.frag.spv"_v);
 
     loader.on_reload(Slice{{vertex, fragment}}, [&](Shader_Loader&) {
         // Recreate your pipeline...

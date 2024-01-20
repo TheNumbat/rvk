@@ -77,7 +77,7 @@ void Shader_Loader::try_reload() {
 }
 
 void Shader_Loader::on_reload(Slice<Shader_Loader::Token> tokens,
-                              Function<void(Shader_Loader&)> callback) {
+                              FunctionN<16, void(Shader_Loader&)> callback) {
     assert(device);
 
     Thread::Lock lock{mutex};
