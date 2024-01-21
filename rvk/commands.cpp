@@ -293,11 +293,4 @@ template struct Command_Pool_Manager<Queue_Family::graphics>;
 template struct Command_Pool_Manager<Queue_Family::compute>;
 template struct Command_Pool_Manager<Queue_Family::transfer>;
 
-thread_local Command_Pool_Manager<Queue_Family::graphics>::This_Thread
-    Command_Pool_Manager<Queue_Family::graphics>::this_thread;
-thread_local Command_Pool_Manager<Queue_Family::compute>::This_Thread
-    Command_Pool_Manager<Queue_Family::compute>::this_thread;
-thread_local Command_Pool_Manager<Queue_Family::transfer>::This_Thread
-    Command_Pool_Manager<Queue_Family::transfer>::this_thread;
-
 } // namespace rvk::impl

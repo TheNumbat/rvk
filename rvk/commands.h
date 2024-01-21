@@ -166,7 +166,7 @@ private:
         Ref<Command_Pool_Manager> pool_manager;
     };
 
-    static thread_local This_Thread this_thread;
+    static inline thread_local This_Thread this_thread;
 
     Arc<Device, Alloc> device;
 
