@@ -10,7 +10,8 @@ namespace rvk {
 
 namespace impl {
 Arc<Device, Alloc> get_device();
-}
+bool validation_enabled();
+} // namespace impl
 
 using namespace rpp;
 
@@ -61,15 +62,21 @@ auto async(Async::Pool<>& pool, F&& f, Queue_Family family, u32 index)
         forward<F>(f)(cmds);
         cmds.end();
         submit(cmds, index, fence);
-        co_await pool.event(fence.event());
-        fence.wait();
+        if(impl::validation_enabled()) {
+            fence.wait();
+        } else {
+            co_await pool.event(fence.event());
+        }
         co_return;
     } else {
         auto ret = forward<F>(f)(cmds);
         cmds.end();
         submit(cmds, index, fence);
-        co_await pool.event(fence.event());
-        fence.wait();
+        if(impl::validation_enabled()) {
+            fence.wait();
+        } else {
+            co_await pool.event(fence.event());
+        }
         co_return ret;
     }
 }

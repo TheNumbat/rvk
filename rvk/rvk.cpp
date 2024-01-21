@@ -110,6 +110,7 @@ struct Vk {
 
     struct State {
         bool has_imgui = false;
+        bool has_validation = false;
         bool resized_last_frame = false;
         bool minimized = false;
         u32 frames_in_flight = 0;
@@ -147,6 +148,7 @@ Vk::Vk(Config config) {
 
     state.has_imgui = config.imgui;
     state.frames_in_flight = config.frames_in_flight;
+    state.has_validation = config.validation;
 
     instance = Arc<Instance, Alloc>::make(move(config.swapchain_extensions), move(config.layers),
                                           move(config.create_surface), config.validation);
@@ -441,6 +443,10 @@ Opt<BLAS::Staged> Vk::make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offse
 
 Pipeline Vk::make_pipeline(Pipeline::Info info) {
     return Pipeline{singleton->device.dup(), move(info)};
+}
+
+bool validation_enabled() {
+    return singleton->state.has_validation;
 }
 
 Arc<Device, Alloc> get_device() {

@@ -247,7 +247,7 @@ void Command_Pool_Manager<F>::begin_thread() {
         VkCommandPool pool = null;
         RVK_CHECK(vkCreateCommandPool(*device, &create_info, null, &pool));
 
-        this_thread.pool = Box<Command_Pool, Alloc>::make(device.dup(), F, pool);
+        this_thread.pool = Arc<Command_Pool, Alloc>::make(device.dup(), F, pool);
 
         Profile::Time_Point end = Profile::timestamp();
         info("[rvk] Allocated new % command pool for thread % in %ms.", F, id,
@@ -292,5 +292,12 @@ Commands Command_Pool_Manager<F>::make() {
 template struct Command_Pool_Manager<Queue_Family::graphics>;
 template struct Command_Pool_Manager<Queue_Family::compute>;
 template struct Command_Pool_Manager<Queue_Family::transfer>;
+
+thread_local Command_Pool_Manager<Queue_Family::graphics>::This_Thread
+    Command_Pool_Manager<Queue_Family::graphics>::this_thread;
+thread_local Command_Pool_Manager<Queue_Family::compute>::This_Thread
+    Command_Pool_Manager<Queue_Family::compute>::this_thread;
+thread_local Command_Pool_Manager<Queue_Family::transfer>::This_Thread
+    Command_Pool_Manager<Queue_Family::transfer>::this_thread;
 
 } // namespace rvk::impl

@@ -114,7 +114,7 @@ struct Command_Pool {
 
 private:
     explicit Command_Pool(Arc<Device, Alloc> device, Queue_Family family, VkCommandPool pool);
-    friend struct Box<Command_Pool, Alloc>;
+    friend struct Arc<Command_Pool, Alloc>;
 
     Commands make();
     void release(VkCommandBuffer commands);
@@ -162,15 +162,15 @@ private:
         ~This_Thread() {
             if(pool_manager) pool_manager->end_thread();
         }
-        Box<Command_Pool, Alloc> pool;
+        Arc<Command_Pool, Alloc> pool;
         Ref<Command_Pool_Manager> pool_manager;
     };
 
-    static inline thread_local This_Thread this_thread;
+    static thread_local This_Thread this_thread;
 
     Arc<Device, Alloc> device;
 
-    Vec<Box<Command_Pool, Alloc>, Alloc> free_list;
+    Vec<Arc<Command_Pool, Alloc>, Alloc> free_list;
     Map<Thread::Id, Empty<>, Alloc> active_threads;
     Thread::Mutex mutex;
 };

@@ -3,6 +3,7 @@
 
 #include "acceleration.h"
 #include "commands.h"
+#include "rvk.h"
 
 namespace rvk::impl {
 
