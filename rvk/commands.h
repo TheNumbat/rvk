@@ -141,8 +141,8 @@ struct Command_Pool_Manager {
     Command_Pool_Manager& operator=(Command_Pool_Manager&&) = delete;
 
     // When allocating a command buffer, you _MUST_ get it from your current
-    // thread's pool, and it _MUST_ be recorded in that thread _ONLY_. Once recording
-    // is complete, it _MAY_ then be passed to another thread (e.g. the main thread)
+    // thread's pool, and it _MUST_ be recorded in that thread _ONLY_. Once the buffer
+    // is ended, it _MAY_ then be passed to another thread (e.g. the main thread)
     // for submission and deletion. Deletion is OK on another thread because
     // all it does is push it onto the buffer free list, which is protected by the mutex.
     //

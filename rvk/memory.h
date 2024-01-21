@@ -163,7 +163,7 @@ struct Buffer {
     u64 length() {
         return address ? address->length() : 0;
     }
-    u64 gpu_address();
+    u64 gpu_address() const;
 
     u8* map();
     void write(Slice<u8> data, u64 offset = 0);

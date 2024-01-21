@@ -340,7 +340,7 @@ Buffer& Buffer::operator=(Buffer&& src) {
     return *this;
 }
 
-u64 Buffer::gpu_address() {
+u64 Buffer::gpu_address() const {
     if(!buffer) return 0;
     VkBufferDeviceAddressInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;

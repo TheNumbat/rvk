@@ -233,6 +233,8 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
 
 BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
+    if(!buffers.geometry.length()) return {};
+
     // Create acceleration structure
 
     VkAccelerationStructureKHR acceleration_structure = null;

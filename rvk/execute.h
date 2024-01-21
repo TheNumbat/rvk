@@ -39,10 +39,12 @@ auto sync(F&& f, Queue_Family family, u32 index) -> Invoke_Result<F, Commands&> 
     auto cmds = make_commands(family);
     if constexpr(Same<Invoke_Result<F, Commands&>, void>) {
         f(cmds);
+        cmds.end();
         submit(cmds, index, fence);
         fence.wait();
     } else {
         auto result = f(cmds);
+        cmds.end();
         submit(cmds, index, fence);
         fence.wait();
         return result;
@@ -53,16 +55,18 @@ template<typename F>
     requires Invocable<F, Commands&>
 auto async(Async::Pool<>& pool, F&& f, Queue_Family family, u32 index)
     -> Async::Task<Invoke_Result<F, Commands&>> {
-    co_await pool.suspend();
     auto fence = make_fence();
     auto cmds = make_commands(family);
     if constexpr(Same<Invoke_Result<F, Commands&>, void>) {
         forward<F>(f)(cmds);
+        cmds.end();
         submit(cmds, index, fence);
         co_await pool.event(fence.event());
         fence.wait();
+        co_return;
     } else {
         auto ret = forward<F>(f)(cmds);
+        cmds.end();
         submit(cmds, index, fence);
         co_await pool.event(fence.event());
         fence.wait();
