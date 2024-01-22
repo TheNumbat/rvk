@@ -110,6 +110,7 @@ struct Vk {
 
     struct State {
         bool has_imgui = false;
+        bool has_validation = false;
         bool resized_last_frame = false;
         bool minimized = false;
         u32 frames_in_flight = 0;
@@ -136,7 +137,7 @@ struct Vk {
 
     Fence make_fence();
     Semaphore make_semaphore();
-    Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
+    Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances);
     Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
     Pipeline make_pipeline(Pipeline::Info info);
 };
@@ -147,6 +148,7 @@ Vk::Vk(Config config) {
 
     state.has_imgui = config.imgui;
     state.frames_in_flight = config.frames_in_flight;
+    state.has_validation = config.validation;
 
     instance = Arc<Instance, Alloc>::make(move(config.swapchain_extensions), move(config.layers),
                                           move(config.create_surface), config.validation);
@@ -357,6 +359,7 @@ void Vk::end_frame(Image_View& output) {
         frame.cmds.reset();
         compositor->render(frame.cmds, state.frame_index, state.swapchain_index, state.has_imgui,
                            output);
+        frame.cmds.end();
 
         // Wait for frame available before running the submit; signal frame complete on finish
         frame.wait(Sem_Ref{frame.available, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT});
@@ -430,8 +433,8 @@ Semaphore Vk::make_semaphore() {
     return Semaphore{device.dup()};
 }
 
-Opt<TLAS::Staged> Vk::make_tlas(Buffer& instances, u32 n_instances) {
-    return TLAS::make(device_memory.dup(), instances, n_instances);
+Opt<TLAS::Staged> Vk::make_tlas(Buffer instances, u32 n_instances) {
+    return TLAS::make(device_memory.dup(), move(instances), n_instances);
 }
 
 Opt<BLAS::Staged> Vk::make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
@@ -440,6 +443,10 @@ Opt<BLAS::Staged> Vk::make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offse
 
 Pipeline Vk::make_pipeline(Pipeline::Info info) {
     return Pipeline{singleton->device.dup(), move(info)};
+}
+
+bool validation_enabled() {
+    return singleton->state.has_validation;
 }
 
 Arc<Device, Alloc> get_device() {
@@ -543,8 +550,8 @@ Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usag
     return impl::singleton->device_memory->make(extent, format, usage);
 }
 
-Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances) {
-    return impl::singleton->make_tlas(instances, n_instances);
+Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances) {
+    return impl::singleton->make_tlas(move(instances), n_instances);
 }
 
 Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
@@ -575,8 +582,8 @@ Descriptor_Set make_set(Descriptor_Set_Layout& layout) {
     return impl::singleton->descriptor_pool->make(layout, impl::singleton->state.frames_in_flight);
 }
 
-Shader_Loader make_shader_loader() {
-    return Shader_Loader{impl::singleton->device.dup()};
+Box<Shader_Loader, Alloc> make_shader_loader() {
+    return Box<Shader_Loader, Alloc>::make(impl::singleton->device.dup());
 }
 
 } // namespace rvk

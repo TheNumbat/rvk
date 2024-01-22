@@ -40,8 +40,6 @@ If you're already using [rpp](https://github.com/TheNumbat/rpp), also set the fo
 set(RVK_HAS_RPP TRUE)
 ```
 
-Alternatively, to start an rvk project from scratch, you can fork [rpp_example_project/rvk](https://github.com/TheNumbat/rpp_example_project/tree/rvk).
-
 ## Examples
 
 ### Main Loop
@@ -103,8 +101,8 @@ i32 main() {
 
     rvk::Shader_Loader loader = rvk::make_shader_loader();
 
-    auto vertex = loader.load("shader.vert.spv"_v);
-    auto fragment = loader.load("shader.frag.spv"_v);
+    auto vertex = loader.compile("shader.vert.spv"_v);
+    auto fragment = loader.compile("shader.frag.spv"_v);
 
     loader.on_reload(Slice{{vertex, fragment}}, [&](Shader_Loader&) {
         // Recreate your pipeline...

@@ -4,6 +4,7 @@
 #include "commands.h"
 #include "device.h"
 #include "pipeline.h"
+#include "rvk.h"
 
 namespace rvk::impl {
 
@@ -46,13 +47,45 @@ Shader& Shader::operator=(Shader&& src) {
     return *this;
 }
 
+Binding_Table::Binding_Table(Arc<Device, Alloc> D, VkPipeline pipeline, u32 n_shaders)
+    : device(move(D)) {
+    Region(R) {
+        u64 handle_size = device->sbt_handle_size();
+        u64 handle_aligned = Math::align(handle_size, device->sbt_handle_alignment());
+        u64 total_size = n_shaders * handle_aligned;
+
+        auto data = Vec<u8, Mregion<R>>::make(total_size);
+
+        RVK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(*device, pipeline, 0, n_shaders, total_size,
+                                                       data.data()));
+
+        Buffer staging = move(*make_staging(total_size));
+
+        u8* map = staging.map();
+        for(u32 g = 0; g < n_shaders; g++) {
+            Libc::memcpy(map, data.data() + g * handle_size, handle_size);
+            map += handle_aligned;
+        }
+
+        buf = move(*make_buffer(total_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                                                VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR));
+
+        sync([&](Commands& cmds) { buf.move_from(cmds, move(staging)); });
+    }
+}
+
+Binding_Table Pipeline::make_table() {
+    return Binding_Table{device.dup(), pipeline, n_shaders};
+}
+
 Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {
     Region(R) {
 
         Vec<VkDescriptorSetLayout, Mregion<R>> layouts(info.descriptor_set_layouts.length());
         Vec<VkPushConstantRange, Mregion<R>> push_constants(info.push_constants.length());
 
-        for(auto& set : info.descriptor_set_layouts) layouts.push(VkDescriptorSetLayout{set});
+        for(auto& set : info.descriptor_set_layouts) layouts.push(VkDescriptorSetLayout{*set});
         for(auto& pc : info.push_constants) push_constants.push(pc);
 
         VkPipelineLayoutCreateInfo layout_info = {};
@@ -69,18 +102,21 @@ Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {
                 kind = Kind::graphics;
                 auto vk_info = graphics;
                 vk_info.layout = layout;
+                n_shaders = vk_info.stageCount;
                 RVK_CHECK(vkCreateGraphicsPipelines(*device, null, 1, &vk_info, null, &pipeline));
             },
             [this](VkComputePipelineCreateInfo& compute) {
                 kind = Kind::compute;
                 auto vk_info = compute;
                 vk_info.layout = layout;
+                n_shaders = 1;
                 RVK_CHECK(vkCreateComputePipelines(*device, null, 1, &vk_info, null, &pipeline));
             },
             [this](VkRayTracingPipelineCreateInfoKHR& ray_tracing) {
                 kind = Kind::ray_tracing;
                 auto vk_info = ray_tracing;
                 vk_info.layout = layout;
+                n_shaders = vk_info.groupCount;
                 RVK_CHECK(vkCreateRayTracingPipelinesKHR(*device, null, null, 1, &vk_info, null,
                                                          &pipeline));
             },
@@ -116,9 +152,9 @@ void Pipeline::bind(Commands& cmds) {
     vkCmdBindPipeline(cmds, bind_point(kind), pipeline);
 }
 
-void Pipeline::bind_set(Commands& cmds, Descriptor_Set& set, u64 frame_index, u32 set_index) {
+void Pipeline::bind_set(Commands& cmds, Descriptor_Set& set, u32 set_index) {
     assert(pipeline);
-    VkDescriptorSet s = set.get(frame_index);
+    VkDescriptorSet s = set.get(frame());
     vkCmdBindDescriptorSets(cmds, bind_point(kind), layout, set_index, 1, &s, 0, null);
 }
 

@@ -21,7 +21,7 @@ using namespace rpp;
 
 // Setup
 
-using Finalizer = FunctionN<8, void()>;
+using Finalizer = FunctionN<16, void()>;
 
 struct Config {
     bool validation = true;
@@ -69,7 +69,7 @@ Commands make_commands(Queue_Family family = Queue_Family::graphics);
 Opt<Buffer> make_staging(u64 size);
 Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage);
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
-Opt<TLAS::Staged> make_tlas(Buffer& instances, u32 n_instances);
+Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances);
 Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
 
 // Pipelines
@@ -88,7 +88,7 @@ template<Type_List L, Binding... Binds>
     requires(Same<L, List<Binds...>>)
 void write_set(Descriptor_Set& set, u32 frame_index, Binds&... binds);
 
-Shader_Loader make_shader_loader();
+Box<Shader_Loader, Alloc> make_shader_loader();
 
 Pipeline make_pipeline(Pipeline::Info info);
 

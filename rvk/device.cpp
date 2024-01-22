@@ -606,8 +606,6 @@ u32 Device::queue_index(Queue_Family family) {
 
 void Device::submit(Commands& cmds, u32 index) {
 
-    cmds.end();
-
     VkCommandBufferSubmitInfo cmd_info = {};
     cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
     cmd_info.commandBuffer = cmds;
@@ -624,8 +622,6 @@ void Device::submit(Commands& cmds, u32 index) {
 }
 
 void Device::submit(Commands& cmds, u32 index, Fence& fence) {
-
-    cmds.end();
 
     VkCommandBufferSubmitInfo cmd_info = {};
     cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -644,8 +640,6 @@ void Device::submit(Commands& cmds, u32 index, Fence& fence) {
 }
 
 void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait) {
-
-    cmds.end();
 
     Region(R) {
 
@@ -689,8 +683,6 @@ void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_
 
 void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait,
                     Fence& fence) {
-
-    cmds.end();
 
     Region(R) {
 

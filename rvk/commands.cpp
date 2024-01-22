@@ -147,6 +147,8 @@ void Commands::reset() {
 
     RVK_CHECK(vkResetCommandBuffer(buffer, 0));
 
+    transient_buffers.clear();
+
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -245,7 +247,7 @@ void Command_Pool_Manager<F>::begin_thread() {
         VkCommandPool pool = null;
         RVK_CHECK(vkCreateCommandPool(*device, &create_info, null, &pool));
 
-        this_thread.pool = Box<Command_Pool, Alloc>::make(device.dup(), F, pool);
+        this_thread.pool = Arc<Command_Pool, Alloc>::make(device.dup(), F, pool);
 
         Profile::Time_Point end = Profile::timestamp();
         info("[rvk] Allocated new % command pool for thread % in %ms.", F, id,

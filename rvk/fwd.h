@@ -48,8 +48,9 @@ struct Command_Pool;
 template<Queue_Family F>
 struct Command_Pool_Manager;
 struct Pipeline;
-template<VkShaderStageFlagBits stages, typename... Ts>
+template<u32 stages, typename... Ts>
 struct Push_Constants;
+struct Binding_Table;
 struct Shader;
 struct Sampler;
 struct Swapchain;
@@ -63,6 +64,7 @@ void check(VkResult result);
 
 } // namespace impl
 
+using impl::Binding_Table;
 using impl::BLAS;
 using impl::Buffer;
 using impl::Commands;

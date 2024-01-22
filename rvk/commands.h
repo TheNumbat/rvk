@@ -114,7 +114,7 @@ struct Command_Pool {
 
 private:
     explicit Command_Pool(Arc<Device, Alloc> device, Queue_Family family, VkCommandPool pool);
-    friend struct Box<Command_Pool, Alloc>;
+    friend struct Arc<Command_Pool, Alloc>;
 
     Commands make();
     void release(VkCommandBuffer commands);
@@ -141,8 +141,8 @@ struct Command_Pool_Manager {
     Command_Pool_Manager& operator=(Command_Pool_Manager&&) = delete;
 
     // When allocating a command buffer, you _MUST_ get it from your current
-    // thread's pool, and it _MUST_ be recorded in that thread _ONLY_. Once recording
-    // is complete, it _MAY_ then be passed to another thread (e.g. the main thread)
+    // thread's pool, and it _MUST_ be recorded in that thread _ONLY_. Once the buffer
+    // is ended, it _MAY_ then be passed to another thread (e.g. the main thread)
     // for submission and deletion. Deletion is OK on another thread because
     // all it does is push it onto the buffer free list, which is protected by the mutex.
     //
@@ -162,7 +162,7 @@ private:
         ~This_Thread() {
             if(pool_manager) pool_manager->end_thread();
         }
-        Box<Command_Pool, Alloc> pool;
+        Arc<Command_Pool, Alloc> pool;
         Ref<Command_Pool_Manager> pool_manager;
     };
 
@@ -170,7 +170,7 @@ private:
 
     Arc<Device, Alloc> device;
 
-    Vec<Box<Command_Pool, Alloc>, Alloc> free_list;
+    Vec<Arc<Command_Pool, Alloc>, Alloc> free_list;
     Map<Thread::Id, Empty<>, Alloc> active_threads;
     Thread::Mutex mutex;
 };
