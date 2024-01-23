@@ -353,13 +353,13 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
     }
 
     { // Find queue families
-        if(auto idx = physical_device->queue_index(Queue_Family::graphics)) {
+        if(auto idx = physical_device->queue_index(Queue_Family::graphics); idx.ok()) {
             graphics_family_index = *idx;
         } else {
             die("[rvk] No graphics queue family found.");
         }
 
-        if(auto idx = physical_device->present_queue_index(surface)) {
+        if(auto idx = physical_device->present_queue_index(surface); idx.ok()) {
             present_family_index = *idx;
         } else {
             die("[rvk] No present queue family found.");
@@ -508,8 +508,9 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
         // Find heaps
 
         {
-            if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
-                                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+            if(auto idx =
+                   physical_device->heap_index(RPP_UINT32_MAX, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+               idx.ok()) {
                 device_memory_index = *idx;
             } else {
                 die("[rvk] No device local heap found.");
@@ -518,7 +519,8 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
             if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
                                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                                                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT)) {
+                                                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+               idx.ok()) {
                 host_memory_index = *idx;
             } else {
                 die("[rvk] No host visible heap found.");

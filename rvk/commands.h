@@ -160,7 +160,7 @@ private:
 
     struct This_Thread {
         ~This_Thread() {
-            if(pool_manager) pool_manager->end_thread();
+            if(pool_manager.ok()) pool_manager->end_thread();
         }
         Arc<Command_Pool, Alloc> pool;
         Ref<Command_Pool_Manager> pool_manager;

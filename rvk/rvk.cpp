@@ -456,7 +456,7 @@ Arc<Device, Alloc> get_device() {
 } // namespace impl
 
 bool startup(Config config) {
-    if(impl::singleton) {
+    if(impl::singleton.ok()) {
         die("[rvk] Already started up!");
     }
     Profile::Time_Point start = Profile::timestamp();

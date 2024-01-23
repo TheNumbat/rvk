@@ -6,14 +6,14 @@
 namespace rvk {
 
 impl::Shader& Shader_Loader::get(Token token) {
-    assert(device);
+    assert(device.ok());
     return shaders.get(token).first;
 }
 
 Shader_Loader::Token Shader_Loader::compile(String_View path) {
-    assert(device);
+    assert(device.ok());
 
-    if(Opt<Vec<u8, Files::Alloc>> data = Files::read(path)) {
+    if(auto data = Files::read(path); data.ok()) {
 
         Shader shader{device.dup(), data->slice()};
         Files::Write_Watcher watcher{path};
@@ -32,9 +32,9 @@ Shader_Loader::Token Shader_Loader::compile(String_View path) {
 
 Async::Task<Shader_Loader::Token> Shader_Loader::compile_async(Async::Pool<>& pool,
                                                                String_View path) {
-    assert(device);
+    assert(device.ok());
 
-    if(Opt<Vec<u8, Files::Alloc>> data = co_await Async::read(pool, path)) {
+    if(auto data = co_await Async::read(pool, path); data.ok()) {
 
         // Will compile on another thread
         Shader shader{device.dup(), data->slice()};
@@ -53,7 +53,7 @@ Async::Task<Shader_Loader::Token> Shader_Loader::compile_async(Async::Pool<>& po
 }
 
 void Shader_Loader::try_reload() {
-    assert(device);
+    assert(device.ok());
 
     Thread::Lock lock{mutex};
 
@@ -67,7 +67,7 @@ void Shader_Loader::try_reload() {
                     data = shader.second.read();
                     shader.first = Shader{device.dup(), data->slice()};
                     callbacks_to_run.insert(reloads.get(token), {});
-                } while(!data);
+                } while(!data.ok());
             }
         }
 
@@ -80,7 +80,7 @@ void Shader_Loader::try_reload() {
 
 void Shader_Loader::on_reload(Slice<Shader_Loader::Token> tokens,
                               FunctionN<16, void(Shader_Loader&)> callback) {
-    assert(device);
+    assert(device.ok());
 
     Thread::Lock lock{mutex};
 

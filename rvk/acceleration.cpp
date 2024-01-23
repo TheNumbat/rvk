@@ -67,12 +67,12 @@ Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer instances,
     Opt<Buffer> structure_buf =
         memory->make(build_sizes.accelerationStructureSize,
                      VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR);
-    if(!structure_buf) return {};
+    if(!structure_buf.ok()) return {};
 
     Opt<Buffer> scratch =
         memory->make(build_sizes.buildScratchSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
                                                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    if(!scratch) return {};
+    if(!scratch.ok()) return {};
 
     return Opt<Staged>{Staged{move(*structure_buf), move(*scratch), move(instances), n_instances,
                               build_sizes.accelerationStructureSize, move(memory)}};
@@ -188,7 +188,7 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
         for(auto& offset : offsets) {
             geom.geometry.triangles.vertexData.deviceAddress = base_data + offset.vertex;
             geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;
-            if(offset.transform) {
+            if(offset.transform.ok()) {
                 geom.geometry.triangles.transformData.deviceAddress = base_data + *offset.transform;
             } else {
                 geom.geometry.triangles.transformData.deviceAddress = 0;
@@ -220,12 +220,12 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
         Opt<Buffer> structure_buf =
             memory->make(build_sizes.accelerationStructureSize,
                          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR);
-        if(!structure_buf) return {};
+        if(!structure_buf.ok()) return {};
 
         Opt<Buffer> scratch =
             memory->make(build_sizes.buildScratchSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
                                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        if(!scratch) return {};
+        if(!scratch.ok()) return {};
 
         return Opt{Staged{move(*structure_buf), move(*scratch), move(data),
                           build_sizes.accelerationStructureSize, move(offsets), move(memory)}};
@@ -272,7 +272,7 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
         for(auto& offset : buffers.offsets) {
             geom.geometry.triangles.vertexData.deviceAddress = base_data + offset.vertex;
             geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;
-            if(offset.transform) {
+            if(offset.transform.ok()) {
                 geom.geometry.triangles.transformData.deviceAddress = base_data + *offset.transform;
             }
             geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices);

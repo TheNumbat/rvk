@@ -107,7 +107,7 @@ Opt<Image> Device_Memory::make(VkExtent3D extent, VkFormat format, VkImageUsageF
         memory_requirements.memoryRequirements.size,
         Math::max(memory_requirements.memoryRequirements.alignment, buffer_image_granularity));
 
-    if(!address) {
+    if(!address.ok()) {
         vkDestroyImage(*device, image, null);
         return {};
     }
@@ -148,7 +148,7 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
     auto address =
         allocator.allocate(memory_requirements.size,
                            Math::max(memory_requirements.alignment, buffer_image_granularity));
-    if(!address) {
+    if(!address.ok()) {
         vkDestroyBuffer(*device, buffer, null);
         return {};
     }

@@ -260,13 +260,13 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
                 }
 
                 auto graphics_queue = device->queue_index(Queue_Family::graphics);
-                if(!graphics_queue) {
+                if(!graphics_queue.ok()) {
                     info("[rvk] Device has no graphics queue family!");
                     continue;
                 }
 
                 auto present_queue = device->present_queue_index(surface);
-                if(!present_queue) {
+                if(!present_queue.ok()) {
                     info("[rvk] Device has no compatible present queue family!");
                     continue;
                 }
@@ -316,14 +316,14 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
             }
         }
 
-        if(!discrete_idx) {
+        if(!discrete_idx.ok()) {
             info("[rvk] No discrete GPU found, selecting first compatible device.");
         } else {
             info("[rvk] Found discrete GPU: %.",
                  compatible_devices[*discrete_idx]->properties().name());
         }
 
-        u32 idx = discrete_idx ? *discrete_idx : 0;
+        u32 idx = discrete_idx.ok() ? *discrete_idx : 0;
         info("[rvk] Selected device: %.", compatible_devices[idx]->properties().name());
 
         return move(compatible_devices.front());

@@ -228,7 +228,7 @@ Command_Pool_Manager<F>::~Command_Pool_Manager() {
 template<Queue_Family F>
 void Command_Pool_Manager<F>::begin_thread() {
 
-    assert(!this_thread.pool);
+    assert(!this_thread.pool.ok());
 
     Thread::Id id = Thread::this_id();
     Thread::Lock lock(mutex);
@@ -267,9 +267,9 @@ void Command_Pool_Manager<F>::begin_thread() {
 template<Queue_Family F>
 void Command_Pool_Manager<F>::end_thread() {
 
-    if(!this_thread.pool) return;
+    if(!this_thread.pool.ok()) return;
 
-    assert(this_thread.pool_manager == Ref{*this});
+    assert(&*this_thread.pool_manager == this);
 
     Thread::Id id = Thread::this_id();
     Thread::Lock lock(mutex);
@@ -285,7 +285,7 @@ void Command_Pool_Manager<F>::end_thread() {
 
 template<Queue_Family F>
 Commands Command_Pool_Manager<F>::make() {
-    if(!this_thread.pool) begin_thread();
+    if(!this_thread.pool.ok()) begin_thread();
     return this_thread.pool->make();
 }
 
