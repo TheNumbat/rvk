@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
-project(ImGui LANGUAGES CXX)
+project(imgui LANGUAGES CXX)
 
 set(SOURCES_IMGUI
     "imgui.cpp"
@@ -15,12 +15,12 @@ set(SOURCES_IMGUI
     "imstb_truetype.h"
 )
 
-add_library(ImGui STATIC ${SOURCES_IMGUI})
+add_library(imgui STATIC ${SOURCES_IMGUI})
 
-target_include_directories(ImGui PRIVATE ${RPP_INCLUDE_DIRS})
+target_include_directories(imgui PRIVATE ${RPP_INCLUDE_DIRS})
 
 if(MSVC)
-    target_compile_definitions(ImGui
+    target_compile_definitions(imgui
         PRIVATE
         WIN32_LEAN_AND_MEAN NOMINMAX _HAS_EXCEPTIONS=0
         $<$<CONFIG:Debug>:>
@@ -31,9 +31,9 @@ if(MSVC)
 
     string(REPLACE "/GR" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
-    target_compile_options(ImGui PRIVATE /arch:AVX2 /MP /W4 /GR- /GS- /EHa- /wd4201)
+    target_compile_options(imgui PRIVATE /arch:AVX2 /MP /W4 /GR- /GS- /EHa- /wd4201)
 else()
-    target_compile_options(ImGui PRIVATE -mavx2 -Wall -Wextra -fno-exceptions -fno-rtti)
+    target_compile_options(imgui PRIVATE -mavx2 -Wall -Wextra -fno-exceptions -fno-rtti)
 endif()
 
-set_target_properties(ImGui PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF)
+set_target_properties(imgui PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF)

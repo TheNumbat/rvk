@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.17)
 project(rvk LANGUAGES CXX)
 
 option(RVK_HAS_RPP "Use existing copy of rpp" OFF)
-option(RVK_TEST "Build tests" OFF)
+option(RVK_NV_AFTERMATH "Enable NV Aftermath crash dumper" OFF)
 
 if(NOT RVK_HAS_RPP)
     add_subdirectory("deps/rpp")

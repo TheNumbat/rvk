@@ -59,7 +59,7 @@ set_property(TARGET rvk PROPERTY INTERPROCEDURAL_OPTIMIZATION
     $<$<CONFIG:Release>:TRUE>
     $<$<CONFIG:MinSizeRel>:TRUE>)
 
-target_link_libraries(rvk PRIVATE rpp volk ImGui)
+target_link_libraries(rvk PRIVATE rpp volk imgui)
 target_include_directories(rvk PRIVATE "../deps/" ${RPP_INCLUDE_DIRS})
 
 if(MSVC)
@@ -80,6 +80,14 @@ if(MSVC)
     target_link_options(rvk PRIVATE /NODEFAULTLIB:MSVCRT)
     target_compile_options(rvk PRIVATE /MP /W4 /GR- /GS- /EHa- /wd4201)
 
+    if(RVK_NV_AFTERMATH)
+        target_compile_definitions(rvk PRIVATE NV_AFTERMATH)
+        target_link_libraries(rvk PRIVATE "${PROJECT_SOURCE_DIR}/../deps/aftermath/GFSDK_Aftermath_Lib.x64.lib")
+        add_custom_command(TARGET rvk POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${PROJECT_SOURCE_DIR}/../deps/aftermath/GFSDK_Aftermath_Lib.x64.dll"
+            ${CMAKE_BINARY_DIR})
+    endif()
 elseif(CLANG)
     if(CLANG_VERSION_MAJOR LESS 17)
         message(FATAL_ERROR "Unsupported Clang version: only 17+ is supported.")
