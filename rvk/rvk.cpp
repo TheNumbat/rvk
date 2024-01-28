@@ -472,6 +472,7 @@ void shutdown() {
 }
 
 void reset_imgui() {
+    vkDeviceWaitIdle(*impl::singleton->device);
     impl::singleton->destroy_imgui();
     impl::singleton->create_imgui();
 }

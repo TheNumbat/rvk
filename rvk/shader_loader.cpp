@@ -65,8 +65,10 @@ void Shader_Loader::try_reload() {
                 Opt<Vec<u8, Files::Alloc>> data;
                 do {
                     data = shader.second.read();
-                    shader.first = Shader{device.dup(), data->slice()};
-                    callbacks_to_run.insert(reloads.get(token), {});
+                    if(data.ok()) {
+                        shader.first = Shader{device.dup(), data->slice()};
+                        callbacks_to_run.insert(reloads.get(token), {});
+                    }
                 } while(!data.ok());
             }
         }

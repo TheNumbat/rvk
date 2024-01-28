@@ -765,12 +765,13 @@ Slice<const char*> Device::baseline_extensions() {
 }
 
 Slice<const char*> Device::ray_tracing_extensions() {
-    static Array<const char*, 5> device{
+    static Array<const char*, 6> device{
         reinterpret_cast<const char*>(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_KHR_RAY_QUERY_EXTENSION_NAME),
     };
     return Slice<const char*>{device};
 }
