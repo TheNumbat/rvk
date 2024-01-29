@@ -8,6 +8,7 @@
 #include <rpp/base.h>
 #include <volk/volk.h>
 
+#ifdef RPP_DEBUG_BUILD
 #define RVK_CHECK(f)                                                                               \
     do {                                                                                           \
         VkResult _vk_res = (f);                                                                    \
@@ -16,6 +17,9 @@
             die("RVK_CHECK: %", describe(_vk_res));                                                \
         }                                                                                          \
     } while(0)
+#else
+#define RVK_CHECK(f) (f)
+#endif
 
 namespace rvk {
 

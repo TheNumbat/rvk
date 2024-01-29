@@ -472,6 +472,7 @@ void shutdown() {
 }
 
 void reset_imgui() {
+    impl::singleton->wait_idle();
     impl::singleton->destroy_imgui();
     impl::singleton->create_imgui();
 }

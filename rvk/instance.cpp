@@ -4,7 +4,63 @@
 #include "device.h"
 #include "instance.h"
 
+#ifdef NV_AFTERMATH
+#include <aftermath/GFSDK_Aftermath_GpuCrashDump.h>
+#include <rpp/files.h>
+#endif
+
 namespace rvk::impl {
+
+#ifdef NV_AFTERMATH
+namespace aftermath {
+
+#define AFTERMATH_CHECK(f)                                                                         \
+    do {                                                                                           \
+        GFSDK_Aftermath_Result _af_res = (f);                                                      \
+        if(!GFSDK_Aftermath_SUCCEED(_af_res)) {                                                    \
+            RPP_DEBUG_BREAK;                                                                       \
+            die("AFTERMATH_CHECK: %", aftermath::describe(_af_res));                               \
+        }                                                                                          \
+    } while(0)
+
+String_View describe(GFSDK_Aftermath_Result result) {
+    switch(result) {
+    case GFSDK_Aftermath_Result_FAIL_DriverVersionNotSupported:
+        return "Unsupported driver version - requires an NVIDIA R495 display driver or newer."_v;
+    default: return "Unknown aftermath error."_v;
+    }
+}
+
+void crash_dump_callback(const void* dump, u32 dump_size, void*) {
+    warn("[aftermath] Crash dump received, size %.", dump_size);
+    Region(R) {
+        static u64 count = 0;
+        auto filename = format<Mregion<R>>("gpu-dump-%.nv-gpudmp"_v, count++);
+        static_cast<void>(Files::write(
+            filename.view(), Slice<u8>{reinterpret_cast<u8*>(const_cast<void*>(dump)), dump_size}));
+    }
+}
+
+void shader_debug_info_callback(const void* dump, u32 debug_info_size, void*) {
+    info("[aftermath] Shader debug info received, size %.", debug_info_size);
+    Region(R) {
+        static u64 count = 0;
+        auto filename = format<Mregion<R>>("gpu-dump-%.nvdbg"_v, count++);
+        static_cast<void>(
+            Files::write(filename.view(), Slice<u8>{reinterpret_cast<u8*>(const_cast<void*>(dump)),
+                                                    debug_info_size}));
+    }
+}
+
+void crash_dump_desc_callback(PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription, void*) {
+    info("[aftermath] Crash dump description requested (ignored).");
+}
+
+void resolve_marker_callback(const void*, const uint32_t, void*, void**, uint32_t*) {
+    info("[aftermath] Resolve marker requested (ignored).");
+}
+} // namespace aftermath
+#endif
 
 using namespace rpp;
 
@@ -53,7 +109,9 @@ static VkBool32 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT sev,
                  obj->pObjectName ? String_View{obj->pObjectName} : "?"_v, obj->objectHandle);
     }
 
+#ifdef RPP_DEBUG_BUILD
     if(is_error) RPP_DEBUG_BREAK;
+#endif
 
     return is_error;
 }
@@ -147,6 +205,15 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers,
             die("[rvk] did not load a platform-specific surface extension!");
         }
 
+#ifdef NV_AFTERMATH
+        AFTERMATH_CHECK(GFSDK_Aftermath_EnableGpuCrashDumps(
+            GFSDK_Aftermath_Version_API, GFSDK_Aftermath_GpuCrashDumpWatchedApiFlags_Vulkan,
+            GFSDK_Aftermath_GpuCrashDumpFeatureFlags_DeferDebugInfoCallbacks,
+            aftermath::crash_dump_callback, aftermath::shader_debug_info_callback,
+            aftermath::crash_dump_desc_callback, aftermath::resolve_marker_callback, null));
+        info("[aftermath] Loaded crash dumper.");
+#endif
+
         Profile::Time_Point end = Profile::timestamp();
         info("[rvk] Created instance in %ms.", Profile::ms(end - start));
     }
@@ -163,6 +230,10 @@ Instance::~Instance() {
         info("[rvk] Destroyed surface.");
     }
     if(instance) {
+#ifdef NV_AFTERMATH
+        GFSDK_Aftermath_DisableGpuCrashDumps();
+#endif
+
         vkDestroyInstance(instance, null);
         info("[rvk] Destroyed instance.");
 
