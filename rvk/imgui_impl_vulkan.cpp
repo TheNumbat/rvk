@@ -459,14 +459,12 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     // Setup scale and translation:
     // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
     {
-        float scale[2];
-        scale[0] = 2.0f / draw_data->DisplaySize.x;
-        scale[1] = 2.0f / draw_data->DisplaySize.y;
-        float translate[2];
-        translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
-        translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
+        float constants[4];
+        constants[0] = 2.0f / draw_data->DisplaySize.x;
+        constants[1] = 2.0f / draw_data->DisplaySize.y;
+        constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0];
+        constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
+        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 4, constants);
     }
 }
 
