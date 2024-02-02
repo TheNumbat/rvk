@@ -13,9 +13,9 @@ It includes the following features:
 - GPU heap allocators (host and device)
 - Multiple frames in flight and resource deletion queue
 - Awaitable GPU tasks for coroutines
+- Multithreaded command pool management for graphics, compute, and transfer queues
 - Swapchain management and compositor
 - Validation config and debug messaging
-- Multithreaded command pool management for graphics, compute, and transfer queues
 - Compile-time descriptor set layout specifications
 - Shader hot reloading
 - [Dear ImGui](https://github.com/ocornut/imgui) integration
@@ -24,10 +24,11 @@ It includes the following features:
 rvk assumes your application uses dynamic rendering and bindless/BDA pipelines.
 It explicitly lacks the following features:
 
-- Fine-grained resource management: the user manages scene data by sub-allocating buffers and using BDA.
-- Shader source management: the user manages compilation to SPIR-V.
-- Pipeline/shader compilation caching: the user manages caching.
-- Windowing: the user manages window creation, choosing a swapchain extension, and user input.
+- Fine-grained resource management: the user wrangles scene data by sub-allocating buffers and/or using BDA.
+- Shader source management: the user controls compilation to SPIR-V.
+- Windowing: the user creates a window, chooses a swapchain extension, and tracks input.
+- Scene graph / dependency tracking / barrier insertion
+- Pipeline caching
 
 The minimal API of rvk may be found in [rvk.h](rvk/rvk.h).
 
