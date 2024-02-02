@@ -364,7 +364,7 @@ void Vk::end_frame(Image_View& output) {
         // Wait for frame available before running the submit; signal frame complete on finish
         frame.wait(Sem_Ref{frame.available, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT});
 
-        auto signal = Sem_Ref{frame.complete, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT};
+        auto signal = Sem_Ref{frame.complete, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT};
         device->submit(frame.cmds, 0, Slice{&signal, 1}, frame.waits(), frame.fence);
 
         frame.clear();
@@ -469,6 +469,10 @@ bool startup(Config config) {
 void shutdown() {
     impl::singleton.clear();
     info("[rvk] Completed shutdown.");
+}
+
+void wait_idle() {
+    impl::singleton->wait_idle();
 }
 
 void reset_imgui() {

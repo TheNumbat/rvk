@@ -41,6 +41,7 @@ struct Config {
 bool startup(Config config);
 void shutdown();
 void reset_imgui();
+void wait_idle();
 
 // Info
 
