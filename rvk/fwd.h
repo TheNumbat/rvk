@@ -18,7 +18,13 @@
         }                                                                                          \
     } while(0)
 #else
-#define RVK_CHECK(f) (f)
+#define RVK_CHECK(f)                                                                               \
+    do {                                                                                           \
+        VkResult _vk_res = (f);                                                                    \
+        if(_vk_res != VK_SUCCESS) {                                                                \
+            warn("RVK_CHECK: %", describe(_vk_res));                                               \
+        }                                                                                          \
+    } while(0)
 #endif
 
 namespace rvk {
