@@ -190,10 +190,10 @@ VkExtent2D Swapchain::choose_extent(VkSurfaceCapabilitiesKHR capabilities) {
     return ext;
 }
 
-Compositor::Compositor(Arc<Device, Alloc>& device, Arc<Descriptor_Pool, Alloc>& pool,
-                       Arc<Swapchain, Alloc> S)
-    : swapchain(move(S)), v(compositor_v(device.dup())), f(compositor_f(device.dup())),
-      ds_layout(device.dup(), compositor_ds_layout()),
+Compositor::Compositor(Arc<Device, Alloc> D, Arc<Swapchain, Alloc> S,
+                       Arc<Descriptor_Pool, Alloc>& pool)
+    : swapchain(move(S)), device(move(D)), v(compositor_v(device.dup())),
+      f(compositor_f(device.dup())), ds_layout(device.dup(), compositor_ds_layout()),
       ds(pool->make(ds_layout, swapchain->frame_count())),
       sampler(device.dup(), VK_FILTER_NEAREST, VK_FILTER_NEAREST),
       pipeline(Pipeline{device.dup(), compositor_pipeline_info(swapchain, ds_layout, v, f)}) {
@@ -243,7 +243,11 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
     vkCmdDraw(cmds, 4, 1, 0, 0);
     if(has_imgui) {
         ImGui::Render();
-        if(auto draw = ImGui::GetDrawData()) ImGui_ImplVulkan_RenderDrawData(draw, cmds);
+        if(auto draw = ImGui::GetDrawData()) {
+            device->lock_queues();
+            ImGui_ImplVulkan_RenderDrawData(draw, cmds);
+            device->unlock_queues();
+        }
     }
     vkCmdEndRendering(cmds);
 }

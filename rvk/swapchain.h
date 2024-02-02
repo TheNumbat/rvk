@@ -16,8 +16,8 @@ using namespace rpp;
 
 struct Compositor {
 
-    explicit Compositor(Arc<Device, Alloc>& device, Arc<Descriptor_Pool, Alloc>& pool,
-                        Arc<Swapchain, Alloc> swapchain);
+    explicit Compositor(Arc<Device, Alloc> device, Arc<Swapchain, Alloc> swapchain,
+                        Arc<Descriptor_Pool, Alloc>& pool);
     ~Compositor();
 
     Compositor(const Compositor&) = delete;
@@ -28,6 +28,7 @@ struct Compositor {
     void render(Commands& cmds, u64 frame_index, u64 slot_index, bool has_imgui, Image_View& input);
 
 private:
+    Arc<Device, Alloc> device;
     Arc<Swapchain, Alloc> swapchain;
 
     Shader v, f;

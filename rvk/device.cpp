@@ -606,6 +606,19 @@ u32 Device::queue_index(Queue_Family family) {
     }
 }
 
+void Device::lock_queues() {
+    mutex.lock();
+}
+
+void Device::unlock_queues() {
+    mutex.unlock();
+}
+
+VkResult Device::present(const VkPresentInfoKHR& info) {
+    Thread::Lock lock(mutex);
+    return vkQueuePresentKHR(present_q, &info);
+}
+
 void Device::submit(Commands& cmds, u32 index) {
 
     VkCommandBufferSubmitInfo cmd_info = {};

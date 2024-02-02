@@ -93,6 +93,7 @@ struct Device {
     Device& operator=(Device&&) = delete;
 
     void imgui();
+    VkResult present(const VkPresentInfoKHR& info);
 
     u32 heap_index(Heap heap);
     u64 heap_size(Heap heap);
@@ -103,7 +104,6 @@ struct Device {
 
     u32 queue_index(Queue_Family family);
     u64 queue_count(Queue_Family family);
-    VkQueue queue(Queue_Family family, u32 index = 0);
 
     void submit(Commands& cmds, u32 index);
     void submit(Commands& cmds, u32 index, Fence& fence);
@@ -122,6 +122,13 @@ private:
     explicit Device(Arc<Physical_Device, Alloc> physical_device, VkSurfaceKHR surface,
                     bool ray_tracing);
     friend struct Arc<Device, Alloc>;
+    friend struct Vk;
+    friend struct Compositor;
+
+    // TODO(max): lock per queue
+    void lock_queues();
+    void unlock_queues();
+    VkQueue queue(Queue_Family family, u32 index = 0);
 
     Arc<Physical_Device, Alloc> physical_device;
     Vec<String<Alloc>, Alloc> enabled_extensions;

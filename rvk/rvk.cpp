@@ -198,7 +198,7 @@ Vk::Vk(Config config) {
                                                 instance->surface(), config.frames_in_flight);
     });
 
-    compositor = Arc<Compositor, Alloc>::make(device, descriptor_pool, swapchain.dup());
+    compositor = Arc<Compositor, Alloc>::make(device.dup(), swapchain.dup(), descriptor_pool);
 
     create_imgui();
 }
@@ -383,7 +383,7 @@ void Vk::end_frame(Image_View& output) {
     present_info.pImageIndices = &state.swapchain_index;
 
     // Submit presentation command
-    VkResult result = vkQueuePresentKHR(device->queue(Queue_Family::present), &present_info);
+    VkResult result = device->present(present_info);
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         recreate_swapchain();
     } else if(result != VK_SUCCESS) {
@@ -414,7 +414,7 @@ void Vk::recreate_swapchain() {
             swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
                                                     instance->surface(), state.frames_in_flight);
         });
-        compositor = Arc<Compositor, Alloc>::make(device, descriptor_pool, swapchain.dup());
+        compositor = Arc<Compositor, Alloc>::make(device.dup(), swapchain.dup(), descriptor_pool);
 
         create_imgui();
 
