@@ -27,6 +27,7 @@ It explicitly lacks the following features:
 - Fine-grained resource management: the user manages scene data by sub-allocating buffers and using BDA.
 - Shader source management: the user manages compilation to SPIR-V.
 - Pipeline/shader compilation caching: the user manages caching.
+- Windowing: the user manages window creation, choosing a swapchain extension, and user input.
 
 The minimal API of rvk may be found in [rvk.h](rvk/rvk.h).
 
