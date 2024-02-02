@@ -3,22 +3,32 @@
 [![Windows](https://github.com/TheNumbat/rvk/actions/workflows/windows.yml/badge.svg)](https://github.com/TheNumbat/rvk/actions/workflows/windows.yml)
 [![Ubuntu](https://github.com/TheNumbat/rvk/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/TheNumbat/rvk/actions/workflows/ubuntu.yml)
 
-[rpp](https://github.com/TheNumbat/rpp)-based Vulkan 1.3 abstraction layer.
+Low-level [rpp](https://github.com/TheNumbat/rpp)-based Vulkan 1.3 abstraction layer.
 
 rvk does not seek to redefine the Vulkan API, nor expose all of its configurability.
 Instead, rvk provides a convenient interface for modern desktop GPUs.
 It includes the following features:
 
 - RAII wrappers for Vulkan objects
-- GPU heap allocator
+- GPU heap allocators (host and device)
 - Multiple frames in flight and resource deletion queue
 - Awaitable GPU tasks for coroutines
 - Swapchain management and compositor
 - Validation config and debug messaging
-- Shader hot reloading
 - Multithreaded command pool management for graphics, compute, and transfer queues
 - Compile-time descriptor set layout specifications
+- Shader hot reloading
 - [Dear ImGui](https://github.com/ocornut/imgui) integration
+- [NVIDIA Aftermath](https://developer.nvidia.com/nsight-aftermath) integration (optional)
+
+rvk assumes your application uses dynamic rendering and bindless/BDA pipelines.
+It explicitly lacks the following features:
+
+- Fine-grained resource management: the user manages scene data by sub-allocating buffers and using BDA.
+- Shader source management: the user manages compilation to SPIR-V.
+- Pipeline/shader compilation caching: the user manages caching.
+
+The minimal API of rvk may be found in [rvk.h](rvk/rvk.h).
 
 ## Integration
 
@@ -41,6 +51,12 @@ If you're already using [rpp](https://github.com/TheNumbat/rpp), also set the fo
 
 ```cmake
 set(RVK_HAS_RPP TRUE)
+```
+
+To enable NVIDIA Aftermath, set the following option:
+
+```cmake
+set(RVK_NV_AFTERMATH TRUE)
 ```
 
 ## Examples
