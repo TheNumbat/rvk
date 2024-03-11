@@ -3,6 +3,8 @@
 [![Windows](https://github.com/TheNumbat/rvk/actions/workflows/windows.yml/badge.svg)](https://github.com/TheNumbat/rvk/actions/workflows/windows.yml)
 [![Ubuntu](https://github.com/TheNumbat/rvk/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/TheNumbat/rvk/actions/workflows/ubuntu.yml)
 
+_Windows CI build pending GitHub actions `windows-latest` update..._
+
 Low-level [rpp](https://github.com/TheNumbat/rpp)-based Vulkan 1.3 abstraction layer.
 
 rvk does not seek to redefine the Vulkan API, nor expose all of its configurability.
