@@ -39,6 +39,7 @@ template<u32 S, typename... Ts>
 struct Push_Constants {
 
     static constexpr VkShaderStageFlagBits stages = static_cast<VkShaderStageFlagBits>(S);
+    using Args = Tuple<Ts...>;
 
     operator Slice<VkPushConstantRange>() {
         u32 offset = 0;
@@ -56,9 +57,18 @@ private:
 
 struct Binding_Table {
 
-    struct Range {
-        u32 start = 0;
-        u32 count = 0;
+    struct Counts {
+        u32 gen = 0;
+        u32 miss = 0;
+        u32 hit = 0;
+        u32 call = 0;
+    };
+
+    struct Mapping {
+        Slice<u32> gen;
+        Slice<u32> miss;
+        Slice<u32> hit;
+        Slice<u32> call;
     };
 
     Binding_Table() = default;
@@ -74,24 +84,33 @@ struct Binding_Table {
     }
 
     template<Region R>
-    Vec<VkStridedDeviceAddressRegionKHR, Mregion<R>> regions(Slice<Range> ranges) {
-        Vec<VkStridedDeviceAddressRegionKHR, Mregion<R>> result;
-        result.reserve(ranges.length());
+    Vec<VkStridedDeviceAddressRegionKHR, Mregion<R>> regions() {
+        Vec<VkStridedDeviceAddressRegionKHR, Mregion<R>> result(4);
         u64 base = buf.gpu_address();
         u64 stride = Math::align(device->sbt_handle_size(), device->sbt_handle_alignment());
-        for(auto& r : ranges) {
-            result.push(
-                VkStridedDeviceAddressRegionKHR{base + r.start * stride, stride, r.count * stride});
-        }
+        result.push(VkStridedDeviceAddressRegionKHR{base, stride, counts.gen * stride});
+        result.push(VkStridedDeviceAddressRegionKHR{base + (counts.gen * stride), stride,
+                                                    counts.miss * stride});
+        result.push(VkStridedDeviceAddressRegionKHR{base + (counts.gen + counts.miss) * stride,
+                                                    stride, counts.hit * stride});
+        result.push(VkStridedDeviceAddressRegionKHR{
+            base + (counts.gen + counts.miss + counts.hit) * stride, stride, counts.call * stride});
         return result;
     }
 
 private:
-    explicit Binding_Table(Arc<Device, Alloc> device, VkPipeline pipeline, u32 n_shaders);
-    friend struct Pipeline;
+    friend struct Vk;
+
+    explicit Binding_Table(Arc<Device, Alloc> device, Buffer buf, Counts counts)
+        : device(move(device)), buf(move(buf)), counts(counts) {
+    }
+
+    static Opt<Binding_Table> make(Arc<Device, Alloc> device, Commands& cmds, Pipeline& pipeline,
+                                   Mapping mapping);
 
     Arc<Device, Alloc> device;
     Buffer buf;
+    Counts counts;
 };
 
 struct Pipeline {
@@ -122,7 +141,12 @@ struct Pipeline {
         vkCmdPushConstants(cmds, layout, stages, 0, sizeof(T), &data);
     }
 
-    Binding_Table make_table();
+    template<Region R>
+    Vec<u8, Mregion<R>> shader_group_handles() {
+        auto data = Vec<u8, Mregion<R>>::make(shader_group_handles_size());
+        shader_group_handles_write(data.slice());
+        return data;
+    }
 
     operator VkPipeline() const {
         return pipeline;
@@ -132,6 +156,9 @@ private:
     explicit Pipeline(Arc<Device, Alloc> device, Info info);
     friend struct Compositor;
     friend struct Vk;
+
+    u64 shader_group_handles_size();
+    void shader_group_handles_write(Slice<u8> data);
 
     Arc<Device, Alloc> device;
 

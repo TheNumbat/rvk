@@ -47,36 +47,83 @@ Shader& Shader::operator=(Shader&& src) {
     return *this;
 }
 
-Binding_Table::Binding_Table(Arc<Device, Alloc> D, VkPipeline pipeline, u32 n_shaders)
-    : device(move(D)) {
+Opt<Binding_Table> Binding_Table::make(Arc<Device, Alloc> device, Commands& cmds,
+                                       Pipeline& pipeline, Mapping mapping) {
+
+    Counts counts = {
+        .gen = static_cast<u32>(mapping.gen.length()),
+        .miss = static_cast<u32>(mapping.miss.length()),
+        .hit = static_cast<u32>(mapping.hit.length()),
+        .call = static_cast<u32>(mapping.call.length()),
+    };
+
+    u64 handle_size = device->sbt_handle_size();
+    u64 handle_aligned = Math::align(handle_size, device->sbt_handle_alignment());
+
+    u64 total_handles = counts.gen + counts.miss + counts.hit + counts.call;
+    u64 total_size = total_handles * handle_aligned;
+
+    rvk::Buffer staging;
+    {
+        if(auto b = rvk::make_staging(total_size); b.ok()) {
+            staging = move(*b);
+        } else {
+            return {};
+        }
+    }
+
     Region(R) {
-        u64 handle_size = device->sbt_handle_size();
-        u64 handle_aligned = Math::align(handle_size, device->sbt_handle_alignment());
-        u64 total_size = n_shaders * handle_aligned;
-
-        auto data = Vec<u8, Mregion<R>>::make(total_size);
-
-        RVK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(*device, pipeline, 0, n_shaders, total_size,
-                                                       data.data()));
-
-        Buffer staging = move(*make_staging(total_size));
+        auto handles = pipeline.shader_group_handles<R>();
 
         u8* map = staging.map();
-        for(u32 g = 0; g < n_shaders; g++) {
-            Libc::memcpy(map, data.data() + g * handle_size, handle_size);
+
+        for(auto& bind : mapping.gen) {
+            u64 offset = bind * handle_size;
+            Libc::memcpy(map, handles.data() + offset, handle_size);
             map += handle_aligned;
         }
-
-        buf = move(*make_buffer(total_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                                                VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR));
-
-        sync([&](Commands& cmds) { buf.move_from(cmds, move(staging)); });
+        for(auto& bind : mapping.miss) {
+            u64 offset = bind * handle_size;
+            Libc::memcpy(map, handles.data() + offset, handle_size);
+            map += handle_aligned;
+        }
+        for(auto& bind : mapping.hit) {
+            u64 offset = bind * handle_size;
+            Libc::memcpy(map, handles.data() + offset, handle_size);
+            map += handle_aligned;
+        }
+        for(auto& bind : mapping.call) {
+            u64 offset = bind * handle_size;
+            Libc::memcpy(map, handles.data() + offset, handle_size);
+            map += handle_aligned;
+        }
     }
+
+    rvk::Buffer buf;
+    if(auto b = rvk::make_buffer(total_size, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |
+                                                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                                                 VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+       b.ok()) {
+        buf = move(*b);
+    } else {
+        return {};
+    }
+
+    buf.move_from(cmds, move(staging));
+
+    return Opt{Binding_Table{move(device), move(buf), counts}};
 }
 
-Binding_Table Pipeline::make_table() {
-    return Binding_Table{device.dup(), pipeline, n_shaders};
+u64 Pipeline::shader_group_handles_size() {
+    u64 handle_size = device->sbt_handle_size();
+    u64 handle_aligned = Math::align(handle_size, device->sbt_handle_alignment());
+    u64 total_size = n_shaders * handle_aligned;
+    return total_size;
+}
+
+void Pipeline::shader_group_handles_write(Slice<u8> data) {
+    RVK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(*device, pipeline, 0, n_shaders, data.length(),
+                                                   const_cast<u8*>(data.data())));
 }
 
 Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {
@@ -144,6 +191,8 @@ Pipeline& Pipeline::operator=(Pipeline&& src) {
     src.layout = null;
     pipeline = src.pipeline;
     src.pipeline = null;
+    n_shaders = src.n_shaders;
+    src.n_shaders = 0;
     return *this;
 }
 

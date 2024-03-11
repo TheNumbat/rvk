@@ -140,6 +140,8 @@ struct Vk {
     Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances);
     Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
     Pipeline make_pipeline(Pipeline::Info info);
+    Opt<Binding_Table> make_table(Commands& cmds, Pipeline& pipeline,
+                                  Binding_Table::Mapping mapping);
 };
 
 static Opt<Vk> singleton;
@@ -445,6 +447,11 @@ Pipeline Vk::make_pipeline(Pipeline::Info info) {
     return Pipeline{singleton->device.dup(), move(info)};
 }
 
+Opt<Binding_Table> Vk::make_table(Commands& cmds, Pipeline& pipeline,
+                                  Binding_Table::Mapping mapping) {
+    return Binding_Table::make(singleton->device.dup(), cmds, pipeline, move(mapping));
+}
+
 bool validation_enabled() {
     return singleton->state.has_validation;
 }
@@ -579,8 +586,13 @@ void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signa
     impl::singleton->device->submit(cmds, index, wait, signal, fence);
 }
 
-impl::Pipeline make_pipeline(impl::Pipeline::Info info) {
+Pipeline make_pipeline(impl::Pipeline::Info info) {
     return impl::singleton->make_pipeline(move(info));
+}
+
+Opt<Binding_Table> make_table(Commands& cmds, impl::Pipeline& pipeline,
+                              Binding_Table::Mapping mapping) {
+    return impl::singleton->make_table(cmds, pipeline, mapping);
 }
 
 Descriptor_Set make_set(Descriptor_Set_Layout& layout) {

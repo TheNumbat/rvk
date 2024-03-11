@@ -21,7 +21,7 @@ using namespace rpp;
 
 // Setup
 
-using Finalizer = FunctionN<16, void()>;
+using Finalizer = FunctionN<24, void()>;
 
 struct Config {
     bool validation = true;
@@ -92,6 +92,8 @@ void write_set(Descriptor_Set& set, u32 frame_index, Binds&... binds);
 Box<Shader_Loader, Alloc> make_shader_loader();
 
 Pipeline make_pipeline(Pipeline::Info info);
+
+Opt<Binding_Table> make_table(Commands& cmds, Pipeline& pipeline, Binding_Table::Mapping mapping);
 
 // Command execution
 
