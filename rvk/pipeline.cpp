@@ -116,14 +116,11 @@ Opt<Binding_Table> Binding_Table::make(Arc<Device, Alloc> device, Commands& cmds
 
 u64 Pipeline::shader_group_handles_size() {
     u64 handle_size = device->sbt_handle_size();
-    u64 handle_aligned = Math::align(handle_size, device->sbt_handle_alignment());
-    u64 total_size = n_shaders * handle_aligned;
-    return total_size;
+    return n_shaders * handle_size;
 }
 
-void Pipeline::shader_group_handles_write(Slice<u8> data) {
-    RVK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(*device, pipeline, 0, n_shaders, data.length(),
-                                                   const_cast<u8*>(data.data())));
+void Pipeline::shader_group_handles_write(u8* data, u64 length) {
+    RVK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(*device, pipeline, 0, n_shaders, length, data));
 }
 
 Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {

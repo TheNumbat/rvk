@@ -144,7 +144,7 @@ struct Pipeline {
     template<Region R>
     Vec<u8, Mregion<R>> shader_group_handles() {
         auto data = Vec<u8, Mregion<R>>::make(shader_group_handles_size());
-        shader_group_handles_write(data.slice());
+        shader_group_handles_write(data.data(), data.length());
         return data;
     }
 
@@ -158,7 +158,7 @@ private:
     friend struct Vk;
 
     u64 shader_group_handles_size();
-    void shader_group_handles_write(Slice<u8> data);
+    void shader_group_handles_write(u8* data, u64 length);
 
     Arc<Device, Alloc> device;
 
