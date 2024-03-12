@@ -130,17 +130,15 @@ Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {
     Region(R) {
 
         Vec<VkDescriptorSetLayout, Mregion<R>> layouts(info.descriptor_set_layouts.length());
-        Vec<VkPushConstantRange, Mregion<R>> push_constants(info.push_constants.length());
 
         for(auto& set : info.descriptor_set_layouts) layouts.push(VkDescriptorSetLayout{*set});
-        for(auto& pc : info.push_constants) push_constants.push(pc);
 
         VkPipelineLayoutCreateInfo layout_info = {};
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layout_info.setLayoutCount = static_cast<u32>(layouts.length());
         layout_info.pSetLayouts = layouts.data();
-        layout_info.pushConstantRangeCount = static_cast<u32>(push_constants.length());
-        layout_info.pPushConstantRanges = push_constants.data();
+        layout_info.pushConstantRangeCount = static_cast<u32>(info.push_constants.length());
+        layout_info.pPushConstantRanges = info.push_constants.data();
 
         RVK_CHECK(vkCreatePipelineLayout(*device, &layout_info, null, &layout));
 

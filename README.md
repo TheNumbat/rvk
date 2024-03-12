@@ -140,7 +140,7 @@ i32 main() {
     VkGraphicsPipelineCreateInfo graphics = /* ... */;
 
     rvk::Pipeline pipeline = rvk::make_pipeline(rvk::Pipeline::Info{
-        .push_constants = rvk::Push_Constants<VK_SHADER_STAGE_VERTEX_BIT, u64>{},
+        .push_constants = Slice{rvk::Push<VK_SHADER_STAGE_VERTEX_BIT, u64>::range},
         .descriptor_set_layouts = Slice{&descriptor_set_layout, 1},
         .info = graphics
     });
