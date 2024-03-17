@@ -58,7 +58,9 @@ void Descriptor_Pool::release(Descriptor_Set& set) {
     vkFreeDescriptorSets(*device, pool, static_cast<u32>(set.sets.length()), set.sets.data());
 }
 
-Descriptor_Set Descriptor_Pool::make(Descriptor_Set_Layout& layout, u64 frames_in_flight) {
+Descriptor_Set Descriptor_Pool::make(Descriptor_Set_Layout& layout, u64 frames_in_flight,
+                                     Slice<u32> counts) {
+    assert(counts.length() == 0 || counts.length() == layout.flag_count);
 
     Vec<VkDescriptorSet, Alloc> sets;
 
@@ -69,11 +71,19 @@ Descriptor_Set Descriptor_Pool::make(Descriptor_Set_Layout& layout, u64 frames_i
 
         sets.resize(frames_in_flight);
 
-        VkDescriptorSetAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorPool = pool;
-        alloc_info.descriptorSetCount = static_cast<u32>(frames_in_flight);
-        alloc_info.pSetLayouts = layouts.data();
+        VkDescriptorSetVariableDescriptorCountAllocateInfo variable_count_info = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
+            .descriptorSetCount = static_cast<u32>(frames_in_flight),
+            .pDescriptorCounts = counts.data(),
+        };
+
+        VkDescriptorSetAllocateInfo alloc_info = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = counts.length() ? &variable_count_info : null,
+            .descriptorPool = pool,
+            .descriptorSetCount = static_cast<u32>(frames_in_flight),
+            .pSetLayouts = layouts.data(),
+        };
 
         {
             Thread::Lock lock(mutex);
@@ -100,6 +110,7 @@ void Descriptor_Set::write(u64 frame_index, Slice<VkWriteDescriptorSet> writes) 
     Region(R) {
         Vec<VkWriteDescriptorSet, Mregion<R>> vk_writes;
         for(auto& write : writes) {
+            if(write.descriptorCount == 0) continue;
             vk_writes.push(write).dstSet = sets[frame_index];
         }
         vkUpdateDescriptorSets(*pool->device, static_cast<u32>(vk_writes.length()),
@@ -108,13 +119,26 @@ void Descriptor_Set::write(u64 frame_index, Slice<VkWriteDescriptorSet> writes) 
 }
 
 Descriptor_Set_Layout::Descriptor_Set_Layout(Arc<Device, Alloc> D,
-                                             Slice<VkDescriptorSetLayoutBinding> bindings)
-    : device(move(D)) {
+                                             Slice<VkDescriptorSetLayoutBinding> bindings,
+                                             Slice<VkDescriptorBindingFlags> flags)
+    : device(move(D)), flag_count(flags.length()) {
 
-    VkDescriptorSetLayoutCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    info.bindingCount = static_cast<u32>(bindings.length());
-    info.pBindings = bindings.data();
+    assert(bindings.length() == flags.length() || flags.length() == 0);
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfo flags_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+        .pNext = null,
+        .bindingCount = static_cast<u32>(flags.length()),
+        .pBindingFlags = flags.data(),
+    };
+
+    VkDescriptorSetLayoutCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = flags.length() ? &flags_info : null,
+        .flags = 0,
+        .bindingCount = static_cast<u32>(bindings.length()),
+        .pBindings = bindings.data(),
+    };
 
     RVK_CHECK(vkCreateDescriptorSetLayout(*device, &info, null, &layout));
 }
@@ -134,6 +158,8 @@ Descriptor_Set_Layout& Descriptor_Set_Layout::operator=(Descriptor_Set_Layout&& 
     device = move(src.device);
     layout = src.layout;
     src.layout = null;
+    flag_count = src.flag_count;
+    src.flag_count = 0;
     return *this;
 }
 

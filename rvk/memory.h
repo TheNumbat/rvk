@@ -84,14 +84,17 @@ struct Image {
                     VkPipelineStageFlags2 dst_stage, VkAccessFlags2 src_access,
                     VkAccessFlags2 dst_access);
 
+    void from_buffer(Commands& commands, Buffer buffer);
+
 private:
     explicit Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
-                   VkFormat format);
+                   VkFormat format, VkExtent3D extent);
 
     Arc<Device_Memory, Alloc> memory;
 
     VkImage image = null;
     VkFormat format_ = VK_FORMAT_UNDEFINED;
+    VkExtent3D extent_ = {};
     Heap_Allocator::Range address = null;
 
     friend struct Device_Memory;

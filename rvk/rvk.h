@@ -21,7 +21,7 @@ using namespace rpp;
 
 // Setup
 
-using Finalizer = FunctionN<24, void()>;
+using Finalizer = FunctionN<16, void()>;
 
 struct Config {
     bool validation = true;
@@ -79,7 +79,7 @@ template<Type_List L>
     requires(Reflect::All<Is_Binding, L>)
 Descriptor_Set_Layout make_layout();
 
-Descriptor_Set make_set(Descriptor_Set_Layout& layout);
+Descriptor_Set make_set(Descriptor_Set_Layout& layout, Slice<u32> counts = Slice<u32>{});
 
 template<Type_List L, Binding... Binds>
     requires(Same<L, List<Binds...>>)

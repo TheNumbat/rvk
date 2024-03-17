@@ -595,8 +595,9 @@ Opt<Binding_Table> make_table(Commands& cmds, impl::Pipeline& pipeline,
     return impl::singleton->make_table(cmds, pipeline, mapping);
 }
 
-Descriptor_Set make_set(Descriptor_Set_Layout& layout) {
-    return impl::singleton->descriptor_pool->make(layout, impl::singleton->state.frames_in_flight);
+Descriptor_Set make_set(Descriptor_Set_Layout& layout, Slice<u32> counts) {
+    return impl::singleton->descriptor_pool->make(layout, impl::singleton->state.frames_in_flight,
+                                                  counts);
 }
 
 Box<Shader_Loader, Alloc> make_shader_loader() {

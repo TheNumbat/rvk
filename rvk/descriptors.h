@@ -26,14 +26,17 @@ struct Descriptor_Set_Layout {
 
 private:
     explicit Descriptor_Set_Layout(Arc<Device, Alloc> device,
-                                   Slice<VkDescriptorSetLayoutBinding> bindings);
+                                   Slice<VkDescriptorSetLayoutBinding> bindings,
+                                   Slice<VkDescriptorBindingFlags> flags);
     friend struct Vk;
 
     Arc<Device, Alloc> device;
     VkDescriptorSetLayout layout = null;
+    u64 flag_count = 0;
 
     friend struct Compositor;
     friend struct Binder;
+    friend struct Descriptor_Pool;
 };
 
 struct Descriptor_Set {
@@ -75,7 +78,7 @@ struct Descriptor_Pool {
         return pool;
     }
 
-    Descriptor_Set make(Descriptor_Set_Layout& layout, u64 frames_in_flight);
+    Descriptor_Set make(Descriptor_Set_Layout& layout, u64 frames_in_flight, Slice<u32> counts);
 
 private:
     explicit Descriptor_Pool(Arc<Device, Alloc> device, u32 bindings_per_type, bool ray_tracing);

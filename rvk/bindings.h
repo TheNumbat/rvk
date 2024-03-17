@@ -18,6 +18,7 @@ template<typename B>
 concept Binding = requires(B bind, Vec<VkWriteDescriptorSet, Mregion<0>>& writes) {
     Same<VkDescriptorType, decltype(B::type)>;
     Same<VkShaderStageFlags, decltype(B::stages)>;
+    Same<VkDescriptorBindingFlags, decltype(B::flags)>;
     { bind.template write<0>(writes) } -> Same<void>;
 };
 
@@ -32,6 +33,7 @@ template<VkShaderStageFlags stages_>
 struct Sampler {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_SAMPLER;
     static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = 0;
 
     explicit Sampler() {
         info.sampler = null;
@@ -57,6 +59,7 @@ template<VkShaderStageFlags stages_>
 struct Image_And_Sampler {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = 0;
 
     explicit Image_And_Sampler() {
         info.sampler = null;
@@ -86,6 +89,7 @@ template<VkShaderStageFlags stages_>
 struct Image_Sampled {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = 0;
 
     explicit Image_Sampled() {
         info.imageView = null;
@@ -110,9 +114,35 @@ struct Image_Sampled {
 };
 
 template<VkShaderStageFlags stages_>
+struct Image_Sampled_Array {
+    static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags =
+        VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+
+    explicit Image_Sampled_Array() = default;
+    explicit Image_Sampled_Array(Slice<Image_Sampled<stages_>> images) {
+        info = images;
+    }
+
+    Slice<Image_Sampled<stages_>> info;
+
+    template<Region R>
+    void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.descriptorType = type;
+        write.descriptorCount = static_cast<u32>(info.length());
+        write.pImageInfo = reinterpret_cast<const VkDescriptorImageInfo*>(info.data());
+        writes.push(write);
+    }
+};
+
+template<VkShaderStageFlags stages_>
 struct Image_Storage {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = 0;
 
     explicit Image_Storage() {
         info.imageView = null;
@@ -140,6 +170,7 @@ template<VkShaderStageFlags stages_>
 struct Buffer_Uniform {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = 0;
 
     explicit Buffer_Uniform() {
         info.buffer = null;
@@ -169,6 +200,7 @@ template<VkShaderStageFlags stages_>
 struct Buffer_Storage {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = 0;
 
     explicit Buffer_Storage() {
         info.buffer = null;
@@ -198,6 +230,7 @@ template<VkShaderStageFlags stages_>
 struct TLAS {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = 0;
 
     explicit TLAS() {
         info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
@@ -233,10 +266,17 @@ template<Region R>
 struct Make {
     template<Binding B>
     void apply() {
-        bindings.push(VkDescriptorSetLayoutBinding{static_cast<u32>(bindings.length()), B::type, 1,
-                                                   B::stages, null});
+        bindings.push(VkDescriptorSetLayoutBinding{
+            .binding = static_cast<u32>(bindings.length()),
+            .descriptorType = B::type,
+            .descriptorCount = 1,
+            .stageFlags = B::stages,
+            .pImmutableSamplers = null,
+        });
+        flags.push(B::flags);
     }
     Vec<VkDescriptorSetLayoutBinding, Mregion<R>>& bindings;
+    Vec<VkDescriptorBindingFlags, Mregion<R>>& flags;
 };
 
 template<Region R, Binding... Binds>
@@ -256,8 +296,9 @@ struct Binder {
     static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device) {
         Region(R) {
             Vec<VkDescriptorSetLayoutBinding, Mregion<R>> bindings(Reflect::List_Length<L>);
-            Reflect::Iter<Make<R>, L>::apply(Make<R>{bindings});
-            return Descriptor_Set_Layout{move(device), bindings.slice()};
+            Vec<VkDescriptorBindingFlags, Mregion<R>> flags(Reflect::List_Length<L>);
+            Reflect::Iter<Make<R>, L>::apply(Make<R>{bindings, flags});
+            return Descriptor_Set_Layout{move(device), bindings.slice(), flags.slice()};
         }
     }
 
