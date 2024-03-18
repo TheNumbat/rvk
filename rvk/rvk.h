@@ -25,8 +25,10 @@ using Finalizer = FunctionN<16, void()>;
 
 struct Config {
     bool validation = true;
+    bool robust_accesses = true;
     bool ray_tracing = false;
     bool imgui = false;
+
     u32 frames_in_flight = 2;
     u32 descriptors_per_type = 128;
 
@@ -77,9 +79,9 @@ Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
 
 template<Type_List L>
     requires(Reflect::All<Is_Binding, L>)
-Descriptor_Set_Layout make_layout();
+Descriptor_Set_Layout make_layout(Slice<u32> counts = Slice<u32>{});
 
-Descriptor_Set make_set(Descriptor_Set_Layout& layout, Slice<u32> counts = Slice<u32>{});
+Descriptor_Set make_set(Descriptor_Set_Layout& layout, u32 variable_count = 0);
 
 template<Type_List L, Binding... Binds>
     requires(Same<L, List<Binds...>>)

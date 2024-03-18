@@ -59,17 +59,18 @@ void Descriptor_Pool::release(Descriptor_Set& set) {
 }
 
 Descriptor_Set Descriptor_Pool::make(Descriptor_Set_Layout& layout, u64 frames_in_flight,
-                                     Slice<u32> counts) {
-    assert(counts.length() == 0 || counts.length() == layout.flag_count);
+                                     u32 variable_count) {
 
-    Vec<VkDescriptorSet, Alloc> sets;
+    auto sets = Vec<VkDescriptorSet, Alloc>::make(frames_in_flight);
 
     Region(R) {
-
+        Vec<u32, Mregion<R>> counts(frames_in_flight);
         Vec<VkDescriptorSetLayout, Mregion<R>> layouts(frames_in_flight);
-        for(u64 i = 0; i < frames_in_flight; ++i) layouts.push(layout);
 
-        sets.resize(frames_in_flight);
+        for(u64 i = 0; i < frames_in_flight; ++i) {
+            counts.push(variable_count);
+            layouts.push(layout);
+        }
 
         VkDescriptorSetVariableDescriptorCountAllocateInfo variable_count_info = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
@@ -79,7 +80,7 @@ Descriptor_Set Descriptor_Pool::make(Descriptor_Set_Layout& layout, u64 frames_i
 
         VkDescriptorSetAllocateInfo alloc_info = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .pNext = counts.length() ? &variable_count_info : null,
+            .pNext = &variable_count_info,
             .descriptorPool = pool,
             .descriptorSetCount = static_cast<u32>(frames_in_flight),
             .pSetLayouts = layouts.data(),
@@ -121,7 +122,7 @@ void Descriptor_Set::write(u64 frame_index, Slice<VkWriteDescriptorSet> writes) 
 Descriptor_Set_Layout::Descriptor_Set_Layout(Arc<Device, Alloc> D,
                                              Slice<VkDescriptorSetLayoutBinding> bindings,
                                              Slice<VkDescriptorBindingFlags> flags)
-    : device(move(D)), flag_count(flags.length()) {
+    : device(move(D)) {
 
     assert(bindings.length() == flags.length() || flags.length() == 0);
 
@@ -158,8 +159,6 @@ Descriptor_Set_Layout& Descriptor_Set_Layout::operator=(Descriptor_Set_Layout&& 
     device = move(src.device);
     layout = src.layout;
     src.layout = null;
-    flag_count = src.flag_count;
-    src.flag_count = 0;
     return *this;
 }
 

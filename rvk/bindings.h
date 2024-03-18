@@ -266,10 +266,11 @@ template<Region R>
 struct Make {
     template<Binding B>
     void apply() {
+        u64 idx = bindings.length();
         bindings.push(VkDescriptorSetLayoutBinding{
-            .binding = static_cast<u32>(bindings.length()),
+            .binding = static_cast<u32>(idx),
             .descriptorType = B::type,
-            .descriptorCount = 1,
+            .descriptorCount = counts.length() ? counts[idx] : 1,
             .stageFlags = B::stages,
             .pImmutableSamplers = null,
         });
@@ -277,6 +278,7 @@ struct Make {
     }
     Vec<VkDescriptorSetLayoutBinding, Mregion<R>>& bindings;
     Vec<VkDescriptorBindingFlags, Mregion<R>>& flags;
+    Slice<u32> counts;
 };
 
 template<Region R, Binding... Binds>
@@ -293,11 +295,13 @@ struct Write {
 struct Binder {
     template<Type_List L>
         requires(Reflect::All<rvk::Is_Binding, L>)
-    static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device) {
+    static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device, Slice<u32> counts) {
+        constexpr u64 N = Reflect::List_Length<L>;
+        assert(counts.length() == N || counts.length() == 0);
         Region(R) {
-            Vec<VkDescriptorSetLayoutBinding, Mregion<R>> bindings(Reflect::List_Length<L>);
-            Vec<VkDescriptorBindingFlags, Mregion<R>> flags(Reflect::List_Length<L>);
-            Reflect::Iter<Make<R>, L>::apply(Make<R>{bindings, flags});
+            Vec<VkDescriptorSetLayoutBinding, Mregion<R>> bindings(N);
+            Vec<VkDescriptorBindingFlags, Mregion<R>> flags(N);
+            Reflect::Iter<Make<R>, L>::apply(Make<R>{bindings, flags, counts});
             return Descriptor_Set_Layout{move(device), bindings.slice(), flags.slice()};
         }
     }

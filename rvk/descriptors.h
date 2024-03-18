@@ -32,7 +32,6 @@ private:
 
     Arc<Device, Alloc> device;
     VkDescriptorSetLayout layout = null;
-    u64 flag_count = 0;
 
     friend struct Compositor;
     friend struct Binder;
@@ -78,7 +77,7 @@ struct Descriptor_Pool {
         return pool;
     }
 
-    Descriptor_Set make(Descriptor_Set_Layout& layout, u64 frames_in_flight, Slice<u32> counts);
+    Descriptor_Set make(Descriptor_Set_Layout& layout, u64 frames_in_flight, u32 variable_count);
 
 private:
     explicit Descriptor_Pool(Arc<Device, Alloc> device, u32 bindings_per_type, bool ray_tracing);

@@ -120,7 +120,7 @@ struct Device {
 
 private:
     explicit Device(Arc<Physical_Device, Alloc> physical_device, VkSurfaceKHR surface,
-                    bool ray_tracing);
+                    bool ray_tracing, bool robustness);
     friend struct Arc<Device, Alloc>;
     friend struct Vk;
     friend struct Compositor;
