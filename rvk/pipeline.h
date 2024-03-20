@@ -10,7 +10,16 @@
 #include "bindings.h"
 #include "descriptors.h"
 
-namespace rvk::impl {
+namespace rvk {
+
+template<typename P>
+concept Push_Constant = requires {
+    typename P::T;
+    Same<decltype(P::stages), VkShaderStageFlagBits>;
+    Same<decltype(P::range), VkPushConstantRange>;
+};
+
+namespace impl {
 
 using namespace rpp;
 
@@ -35,24 +44,15 @@ private:
     VkShaderModule shader = null;
 };
 
-template<u32 S, typename... Ts>
-struct Push_Constants {
-
+template<typename D, u32 S, u32 O = 0>
+struct Push {
+    using T = D;
     static constexpr VkShaderStageFlagBits stages = static_cast<VkShaderStageFlagBits>(S);
-    using Args = Tuple<Ts...>;
+    static constexpr VkPushConstantRange range{stages, O, sizeof(D)};
 
-    operator Slice<VkPushConstantRange>() {
-        u32 offset = 0;
-        for(auto& r : range) {
-            r.offset = offset;
-            offset += r.size;
-        }
-        return Slice<VkPushConstantRange>{range};
+    operator VkPushConstantRange() const {
+        return range;
     }
-
-private:
-    static inline Array<VkPushConstantRange, sizeof...(Ts)> range{
-        VkPushConstantRange{stages, 0, sizeof(Ts)}...};
 };
 
 struct Binding_Table {
@@ -136,15 +136,15 @@ struct Pipeline {
     void bind(Commands& cmds);
     void bind_set(Commands& cmds, Descriptor_Set& set, u32 set_index = 0);
 
-    template<typename T>
-    void push(Commands& cmds, VkShaderStageFlagBits stages, const T& data) {
-        vkCmdPushConstants(cmds, layout, stages, 0, sizeof(T), &data);
+    template<Push_Constant P>
+    void push(Commands& cmds, const typename P::T& data) {
+        vkCmdPushConstants(cmds, layout, P::stages, P::range.offset, P::range.size, &data);
     }
 
     template<Region R>
     Vec<u8, Mregion<R>> shader_group_handles() {
         auto data = Vec<u8, Mregion<R>>::make(shader_group_handles_size());
-        shader_group_handles_write(data.slice());
+        shader_group_handles_write(data.data(), data.length());
         return data;
     }
 
@@ -158,7 +158,7 @@ private:
     friend struct Vk;
 
     u64 shader_group_handles_size();
-    void shader_group_handles_write(Slice<u8> data);
+    void shader_group_handles_write(u8* data, u64 length);
 
     Arc<Device, Alloc> device;
 
@@ -168,7 +168,8 @@ private:
     u32 n_shaders = 0;
 };
 
-} // namespace rvk::impl
+} // namespace impl
+} // namespace rvk
 
 RPP_NAMED_ENUM(rvk::impl::Pipeline::Kind, "Pipeline::Kind", graphics, RPP_CASE(graphics),
                RPP_CASE(compute), RPP_CASE(ray_tracing));

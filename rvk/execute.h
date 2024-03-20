@@ -17,8 +17,8 @@ using namespace rpp;
 
 template<Type_List L>
     requires(Reflect::All<Is_Binding, L>)
-Descriptor_Set_Layout make_layout() {
-    return impl::Binder::template make<L>(impl::get_device());
+Descriptor_Set_Layout make_layout(Slice<u32> counts) {
+    return impl::Binder::template make<L>(impl::get_device(), counts);
 }
 
 template<Type_List L, Binding... Binds>

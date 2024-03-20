@@ -193,8 +193,8 @@ VkExtent2D Swapchain::choose_extent(VkSurfaceCapabilitiesKHR capabilities) {
 Compositor::Compositor(Arc<Device, Alloc> D, Arc<Swapchain, Alloc> S,
                        Arc<Descriptor_Pool, Alloc>& pool)
     : swapchain(move(S)), device(move(D)), v(compositor_v(device.dup())),
-      f(compositor_f(device.dup())), ds_layout(device.dup(), compositor_ds_layout()),
-      ds(pool->make(ds_layout, swapchain->frame_count())),
+      f(compositor_f(device.dup())), ds_layout(device.dup(), compositor_ds_layout(), Slice<u32>{}),
+      ds(pool->make(ds_layout, swapchain->frame_count(), 0)),
       sampler(device.dup(), VK_FILTER_NEAREST, VK_FILTER_NEAREST),
       pipeline(Pipeline{device.dup(), compositor_pipeline_info(swapchain, ds_layout, v, f)}) {
     info("[rvk] Created compositor.");

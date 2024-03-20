@@ -159,8 +159,8 @@ Vk::Vk(Config config) {
 
     physical_device = instance->physical_device(instance->surface(), config.ray_tracing);
 
-    device =
-        Arc<Device, Alloc>::make(physical_device.dup(), instance->surface(), config.ray_tracing);
+    device = Arc<Device, Alloc>::make(physical_device.dup(), instance->surface(),
+                                      config.ray_tracing, config.robust_accesses);
 
     host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
                                                   config.host_heap);
@@ -277,7 +277,7 @@ void Vk::create_imgui() {
 }
 
 void Vk::wait_idle() {
-    vkDeviceWaitIdle(*device);
+    device->wait_idle();
     for(auto& queue : deletion_queues) {
         queue.clear();
     }
@@ -595,8 +595,9 @@ Opt<Binding_Table> make_table(Commands& cmds, impl::Pipeline& pipeline,
     return impl::singleton->make_table(cmds, pipeline, mapping);
 }
 
-Descriptor_Set make_set(Descriptor_Set_Layout& layout) {
-    return impl::singleton->descriptor_pool->make(layout, impl::singleton->state.frames_in_flight);
+Descriptor_Set make_set(Descriptor_Set_Layout& layout, u32 variable_count) {
+    return impl::singleton->descriptor_pool->make(layout, impl::singleton->state.frames_in_flight,
+                                                  variable_count);
 }
 
 Box<Shader_Loader, Alloc> make_shader_loader() {

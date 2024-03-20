@@ -4,7 +4,7 @@
 #include "commands.h"
 #include "device.h"
 
-static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
+static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing, bool robustness) {
 
     static VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR ray_position_fetch_features = {};
     ray_position_fetch_features.sType =
@@ -49,7 +49,7 @@ static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
     static VkPhysicalDeviceVulkan13Features vk13_features = {};
     vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vk13_features.pNext = &shader_clock_features;
-    vk13_features.robustImageAccess = VK_TRUE;
+    vk13_features.robustImageAccess = robustness;
     vk13_features.synchronization2 = VK_TRUE;
     vk13_features.dynamicRendering = VK_TRUE;
     vk13_features.maintenance4 = VK_TRUE;
@@ -97,8 +97,8 @@ static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
     static VkPhysicalDeviceRobustness2FeaturesEXT robust_features = {};
     robust_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
     robust_features.pNext = &vk11_features;
-    robust_features.robustBufferAccess2 = VK_TRUE;
-    robust_features.robustImageAccess2 = VK_TRUE;
+    robust_features.robustBufferAccess2 = robustness;
+    robust_features.robustImageAccess2 = robustness;
     robust_features.nullDescriptor = VK_TRUE;
 
     static VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_features = {};
@@ -109,7 +109,7 @@ static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing) {
     static VkPhysicalDeviceFeatures2 features2 = {};
     features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     features2.pNext = &memory_features;
-    features2.features.robustBufferAccess = VK_TRUE;
+    features2.features.robustBufferAccess = robustness;
     features2.features.imageCubeArray = VK_TRUE;
     features2.features.geometryShader = VK_TRUE;
     features2.features.tessellationShader = VK_TRUE;
@@ -338,7 +338,8 @@ void Physical_Device::imgui() {
     }
 }
 
-Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tracing)
+Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tracing,
+               bool robustness)
     : physical_device(move(P)) {
 
     Profile::Time_Point start = Profile::timestamp();
@@ -450,7 +451,7 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
 
             {
                 VkDeviceCreateInfo dev_info = {};
-                dev_info.pNext = baseline_features(ray_tracing);
+                dev_info.pNext = baseline_features(ray_tracing, robustness);
                 dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
                 dev_info.queueCreateInfoCount = static_cast<u32>(queue_infos.length());
                 dev_info.pQueueCreateInfos = queue_infos.data();
@@ -617,6 +618,11 @@ void Device::unlock_queues() {
 VkResult Device::present(const VkPresentInfoKHR& info) {
     Thread::Lock lock(mutex);
     return vkQueuePresentKHR(present_q, &info);
+}
+
+void Device::wait_idle() {
+    Thread::Lock lock(mutex);
+    RVK_CHECK(vkDeviceWaitIdle(device));
 }
 
 void Device::submit(Commands& cmds, u32 index) {

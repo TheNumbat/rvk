@@ -93,6 +93,7 @@ struct Device {
     Device& operator=(Device&&) = delete;
 
     void imgui();
+    void wait_idle();
     VkResult present(const VkPresentInfoKHR& info);
 
     u32 heap_index(Heap heap);
@@ -120,7 +121,7 @@ struct Device {
 
 private:
     explicit Device(Arc<Physical_Device, Alloc> physical_device, VkSurfaceKHR surface,
-                    bool ray_tracing);
+                    bool ray_tracing, bool robustness);
     friend struct Arc<Device, Alloc>;
     friend struct Vk;
     friend struct Compositor;

@@ -32,6 +32,7 @@ struct Shader_Loader {
 
     void try_reload();
     void on_reload(Slice<Token> shaders, FunctionN<16, void(Shader_Loader&)> callback);
+    void trigger(Token token);
 
 private:
     using Device = impl::Device;

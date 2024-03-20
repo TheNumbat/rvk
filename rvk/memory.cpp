@@ -72,34 +72,40 @@ Opt<Image> Device_Memory::make(VkExtent3D extent, VkFormat format, VkImageUsageF
 
     VkImage image = null;
 
-    VkImageCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    info.imageType = VK_IMAGE_TYPE_2D;
-    info.extent = extent;
-    info.mipLevels = 1;
-    info.arrayLayers = 1;
-    info.format = format;
-    info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    info.samples = VK_SAMPLE_COUNT_1_BIT;
-    info.usage = usage;
-    info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-
     Array<u32, 3> indices{device->queue_index(Queue_Family::graphics),
                           device->queue_index(Queue_Family::compute),
                           device->queue_index(Queue_Family::transfer)};
 
-    info.pQueueFamilyIndices = indices.data();
-    info.queueFamilyIndexCount = static_cast<u32>(indices.length());
+    VkImageCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = null,
+        .flags = 0,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = format,
+        .extent = extent,
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_CONCURRENT,
+        .queueFamilyIndexCount = static_cast<u32>(indices.length()),
+        .pQueueFamilyIndices = indices.data(),
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
 
     RVK_CHECK(vkCreateImage(*device, &info, null, &image));
 
-    VkImageMemoryRequirementsInfo2 image_requirements = {};
-    image_requirements.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2;
-    image_requirements.image = image;
+    VkImageMemoryRequirementsInfo2 image_requirements = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
+        .pNext = null,
+        .image = image,
+    };
 
-    VkMemoryRequirements2 memory_requirements = {};
-    memory_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+    VkMemoryRequirements2 memory_requirements = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+        .pNext = null,
+    };
 
     vkGetImageMemoryRequirements2(*device, &image_requirements, &memory_requirements);
 
@@ -112,15 +118,17 @@ Opt<Image> Device_Memory::make(VkExtent3D extent, VkFormat format, VkImageUsageF
         return {};
     }
 
-    VkBindImageMemoryInfo bind = {};
-    bind.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO;
-    bind.memory = device_memory;
-    bind.image = image;
-    bind.memoryOffset = (*address)->offset;
+    VkBindImageMemoryInfo bind = {
+        .sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO,
+        .pNext = null,
+        .image = image,
+        .memory = device_memory,
+        .memoryOffset = (*address)->offset,
+    };
 
     RVK_CHECK(vkBindImageMemory2(*device, 1, &bind));
 
-    return Opt{Image{Arc<Device_Memory, Alloc>::from_this(this), *address, image, format}};
+    return Opt{Image{Arc<Device_Memory, Alloc>::from_this(this), *address, image, format, extent}};
 }
 
 Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
@@ -165,8 +173,8 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
 }
 
 Image::Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
-             VkFormat format)
-    : memory(move(memory)), image(image), format_(format), address(address){};
+             VkFormat format, VkExtent3D extent)
+    : memory(move(memory)), image(image), format_(format), extent_(extent), address(address){};
 
 Image::~Image() {
     if(image) {
@@ -191,6 +199,8 @@ Image& Image::operator=(Image&& src) {
     src.format_ = VK_FORMAT_UNDEFINED;
     address = src.address;
     src.address = null;
+    extent_ = src.extent_;
+    src.extent_ = {};
     return *this;
 }
 
@@ -203,6 +213,40 @@ void Image::setup(Commands& commands, VkImageLayout layout) {
     transition(commands, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, layout,
                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
                VK_ACCESS_2_NONE, VK_ACCESS_2_NONE);
+}
+
+void Image::from_buffer(Commands& commands, Buffer buffer) {
+
+    VkBufferImageCopy2 copy = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+        .pNext = null,
+        .bufferOffset = 0,
+        .bufferRowLength = 0,
+        .bufferImageHeight = 0,
+        .imageSubresource =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+        .imageOffset = {0, 0, 0},
+        .imageExtent = extent_,
+    };
+
+    VkCopyBufferToImageInfo2 copy_info = {
+        .sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
+        .pNext = null,
+        .srcBuffer = buffer,
+        .dstImage = image,
+        .dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .regionCount = 1,
+        .pRegions = &copy,
+    };
+
+    vkCmdCopyBufferToImage2(commands, &copy_info);
+
+    commands.attach(move(buffer));
 }
 
 void Image::transition(Commands& commands, VkImageAspectFlags aspect, VkImageLayout src_layout,

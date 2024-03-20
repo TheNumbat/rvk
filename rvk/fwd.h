@@ -58,8 +58,8 @@ struct Command_Pool;
 template<Queue_Family F>
 struct Command_Pool_Manager;
 struct Pipeline;
-template<u32 stages, typename... Ts>
-struct Push_Constants;
+template<typename T, u32 stages, u32 offset>
+struct Push;
 struct Binding_Table;
 struct Shader;
 struct Sampler;
@@ -84,7 +84,7 @@ using impl::Fence;
 using impl::Image;
 using impl::Image_View;
 using impl::Pipeline;
-using impl::Push_Constants;
+using impl::Push;
 using impl::Sem_Ref;
 using impl::Semaphore;
 using impl::Shader;
