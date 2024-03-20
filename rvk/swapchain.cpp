@@ -192,7 +192,7 @@ VkExtent2D Swapchain::choose_extent(VkSurfaceCapabilitiesKHR capabilities) {
 
 Compositor::Compositor(Arc<Device, Alloc> D, Arc<Swapchain, Alloc> S,
                        Arc<Descriptor_Pool, Alloc>& pool)
-    : swapchain(move(S)), device(move(D)), v(compositor_v(device.dup())),
+    : device(move(D)), swapchain(move(S)), v(compositor_v(device.dup())),
       f(compositor_f(device.dup())), ds_layout(device.dup(), compositor_ds_layout(), Slice<u32>{}),
       ds(pool->make(ds_layout, swapchain->frame_count(), 0)),
       sampler(device.dup(), VK_FILTER_NEAREST, VK_FILTER_NEAREST),
@@ -219,7 +219,7 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
         write.descriptorCount = 1;
         write.pImageInfo = &info;
 
-        ds.write(frame_index, Slice{&write, 1});
+        ds.write(frame_index, Slice{write});
     }
 
     VkRenderingAttachmentInfo swapchain_attachment = {};
@@ -259,7 +259,7 @@ static Slice<VkDescriptorSetLayoutBinding> compositor_ds_layout() {
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     };
-    return Slice{&binding, 1};
+    return Slice{binding};
 }
 
 static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
@@ -361,13 +361,13 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
 
     return Pipeline::Info{
         .push_constants = {},
-        .descriptor_set_layouts = Slice{&layout_ref, 1},
+        .descriptor_set_layouts = Slice{layout_ref},
         .info = Pipeline::VkCreateInfo{move(pipeline_info)},
     };
 }
 
 static Shader compositor_v(Arc<Device, Alloc> device) {
-    unsigned char compositor_vert_spv[] = {
+    static constexpr u8 compositor_vert_spv[] = {
         0x03, 0x02, 0x23, 0x07, 0x00, 0x06, 0x01, 0x00, 0x0b, 0x00, 0x0d, 0x00, 0x35, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00,
         0x06, 0x00, 0x01, 0x00, 0x00, 0x00, 0x47, 0x4c, 0x53, 0x4c, 0x2e, 0x73, 0x74, 0x64, 0x2e,
@@ -440,7 +440,7 @@ static Shader compositor_v(Arc<Device, Alloc> device) {
 }
 
 static Shader compositor_f(Arc<Device, Alloc> device) {
-    static unsigned char compositor_frag_spv[] = {
+    static constexpr u8 compositor_frag_spv[] = {
         0x03, 0x02, 0x23, 0x07, 0x00, 0x06, 0x01, 0x00, 0x0b, 0x00, 0x0d, 0x00, 0x14, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00,
         0x06, 0x00, 0x01, 0x00, 0x00, 0x00, 0x47, 0x4c, 0x53, 0x4c, 0x2e, 0x73, 0x74, 0x64, 0x2e,

@@ -367,7 +367,7 @@ void Vk::end_frame(Image_View& output) {
         frame.wait(Sem_Ref{frame.available, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT});
 
         auto signal = Sem_Ref{frame.complete, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT};
-        device->submit(frame.cmds, 0, Slice{&signal, 1}, frame.waits(), frame.fence);
+        device->submit(frame.cmds, 0, Slice{signal}, frame.waits(), frame.fence);
 
         frame.clear();
     }
