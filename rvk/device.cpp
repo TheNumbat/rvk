@@ -620,6 +620,11 @@ VkResult Device::present(const VkPresentInfoKHR& info) {
     return vkQueuePresentKHR(present_q, &info);
 }
 
+void Device::wait_idle() {
+    Thread::Lock lock(mutex);
+    RVK_CHECK(vkDeviceWaitIdle(device));
+}
+
 void Device::submit(Commands& cmds, u32 index) {
 
     VkCommandBufferSubmitInfo cmd_info = {};

@@ -277,7 +277,7 @@ void Vk::create_imgui() {
 }
 
 void Vk::wait_idle() {
-    vkDeviceWaitIdle(*device);
+    device->wait_idle();
     for(auto& queue : deletion_queues) {
         queue.clear();
     }

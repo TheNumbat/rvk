@@ -93,6 +93,7 @@ struct Device {
     Device& operator=(Device&&) = delete;
 
     void imgui();
+    void wait_idle();
     VkResult present(const VkPresentInfoKHR& info);
 
     u32 heap_index(Heap heap);
