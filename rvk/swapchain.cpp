@@ -208,33 +208,37 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
                         Image_View& input) {
 
     {
-        VkDescriptorImageInfo info = {};
-        info.sampler = sampler;
-        info.imageView = input;
-        info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        VkDescriptorImageInfo info = {
+            .sampler = sampler,
+            .imageView = input,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
 
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write.descriptorCount = 1;
-        write.pImageInfo = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &info,
+        };
 
         ds.write(frame_index, Slice{write});
     }
 
-    VkRenderingAttachmentInfo swapchain_attachment = {};
-    swapchain_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    swapchain_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    swapchain_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    swapchain_attachment.imageView = swapchain->view(slot_index);
-    swapchain_attachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+    VkRenderingAttachmentInfo swapchain_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = swapchain->view(slot_index),
+        .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+    };
 
-    VkRenderingInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    info.renderArea.extent = swapchain->extent();
-    info.layerCount = 1;
-    info.colorAttachmentCount = 1;
-    info.pColorAttachments = &swapchain_attachment;
+    VkRenderingInfo info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {.extent = swapchain->extent()},
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &swapchain_attachment,
+    };
 
     pipeline.bind(cmds);
     pipeline.bind_set(cmds, ds);
@@ -259,7 +263,7 @@ static Slice<VkDescriptorSetLayoutBinding> compositor_ds_layout() {
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
     };
-    return Slice{binding};
+    return Slice{&binding, 1};
 }
 
 static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
@@ -361,7 +365,7 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
 
     return Pipeline::Info{
         .push_constants = {},
-        .descriptor_set_layouts = Slice{layout_ref},
+        .descriptor_set_layouts = Slice{&layout_ref, 1},
         .info = Pipeline::VkCreateInfo{move(pipeline_info)},
     };
 }
