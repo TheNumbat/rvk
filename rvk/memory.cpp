@@ -169,7 +169,7 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
 
     RVK_CHECK(vkBindBufferMemory2(*device, 1, &bind));
 
-    return Opt<Buffer>{Buffer{Arc<Device_Memory, Alloc>::from_this(this), *address, buffer}};
+    return Opt<Buffer>{Buffer{Arc<Device_Memory, Alloc>::from_this(this), *address, buffer, size}};
 }
 
 Image::Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
@@ -356,8 +356,9 @@ Sampler& Sampler::operator=(Sampler&& src) {
     return *this;
 }
 
-Buffer::Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkBuffer buffer)
-    : memory(move(memory)), buffer(buffer), address(address) {
+Buffer::Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkBuffer buffer,
+               u64 len)
+    : memory(move(memory)), buffer(buffer), address(address), len(len) {
 }
 
 Buffer::~Buffer() {
@@ -367,6 +368,7 @@ Buffer::~Buffer() {
     }
     buffer = null;
     address = null;
+    len = 0;
 }
 
 Buffer::Buffer(Buffer&& src) {
@@ -381,6 +383,8 @@ Buffer& Buffer::operator=(Buffer&& src) {
     src.buffer = null;
     address = src.address;
     src.address = null;
+    len = src.len;
+    src.len = 0;
     return *this;
 }
 
@@ -403,14 +407,14 @@ u8* Buffer::map() {
 
 void Buffer::write(Slice<u8> data, u64 offset) {
     assert(buffer);
-    assert(data.length() + offset <= address->length());
+    assert(data.length() + offset <= len);
 
     Libc::memcpy(map() + offset, data.data(), data.length());
 }
 
 void Buffer::copy_from(Commands& commands, Buffer& from) {
     assert(buffer);
-    assert(from.length() <= address->length());
+    assert(from.length() <= len);
 
     VkBufferCopy2 region = {};
     region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
@@ -430,7 +434,7 @@ void Buffer::copy_from(Commands& commands, Buffer& from) {
 
 void Buffer::copy_from(Commands& commands, Buffer& src, u64 src_offset, u64 dst_offset, u64 size) {
     assert(buffer);
-    assert(dst_offset + size <= address->length());
+    assert(dst_offset + size <= len);
 
     VkBufferCopy2 region = {};
     region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;

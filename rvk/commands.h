@@ -97,6 +97,7 @@ private:
     Arc<Command_Pool, Alloc> pool;
     Vec<Buffer, Alloc> transient_buffers;
 
+    Thread::Mutex mutex;
     VkCommandBuffer buffer = null;
     Queue_Family family_ = Queue_Family::graphics;
 

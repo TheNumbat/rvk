@@ -164,7 +164,7 @@ struct Buffer {
         return address ? address->offset : 0;
     }
     u64 length() {
-        return address ? address->length() : 0;
+        return len;
     }
     u64 gpu_address() const;
 
@@ -181,11 +181,12 @@ struct Buffer {
 
 private:
     explicit Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address,
-                    VkBuffer buffer);
+                    VkBuffer buffer, u64 len);
 
     Arc<Device_Memory, Alloc> memory;
 
     VkBuffer buffer = null;
+    u64 len = 0;
     Heap_Allocator::Range address = null;
 
     friend struct Device_Memory;

@@ -129,6 +129,8 @@ Commands::Commands(Commands&& src) {
 Commands& Commands::operator=(Commands&& src) {
     assert(this != &src);
     this->~Commands();
+    Thread::Lock l0(mutex);
+    Thread::Lock l1(src.mutex);
     pool = move(src.pool);
     transient_buffers = move(src.transient_buffers);
     family_ = src.family_;
@@ -139,6 +141,7 @@ Commands& Commands::operator=(Commands&& src) {
 
 void Commands::attach(Buffer buf) {
     assert(buffer);
+    Thread::Lock lock(mutex);
     transient_buffers.push(move(buf));
 }
 
@@ -147,7 +150,10 @@ void Commands::reset() {
 
     RVK_CHECK(vkResetCommandBuffer(buffer, 0));
 
-    transient_buffers.clear();
+    {
+        Thread::Lock lock(mutex);
+        transient_buffers.clear();
+    }
 
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

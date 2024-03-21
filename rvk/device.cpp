@@ -101,14 +101,15 @@ static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing, bool robus
     robust_features.robustImageAccess2 = robustness;
     robust_features.nullDescriptor = VK_TRUE;
 
-    static VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_features = {};
-    memory_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
-    memory_features.pNext = &robust_features;
-    memory_features.memoryPriority = VK_TRUE;
+    // static VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_features = {};
+    // memory_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
+    // memory_features.pNext = &robust_features;
+    // memory_features.memoryPriority = VK_TRUE;
 
     static VkPhysicalDeviceFeatures2 features2 = {};
     features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = &memory_features;
+    // features2.pNext = &memory_features;
+    features2.pNext = &robust_features;
     features2.features.robustBufferAccess = robustness;
     features2.features.imageCubeArray = VK_TRUE;
     features2.features.geometryShader = VK_TRUE;
@@ -769,8 +770,8 @@ void Device::imgui() {
 Slice<const char*> Device::baseline_extensions() {
     static Array<const char*, 7> device{
         reinterpret_cast<const char*>(VK_KHR_SWAPCHAIN_EXTENSION_NAME),
-        reinterpret_cast<const char*>(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME),
+        reinterpret_cast<const char*>(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_KHR_SHADER_CLOCK_EXTENSION_NAME),

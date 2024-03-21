@@ -45,7 +45,6 @@ Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer instances,
     geom.geometry.instances.sType =
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
     geom.geometry.instances.arrayOfPointers = VK_FALSE;
-    geom.geometry.instances.data.deviceAddress = instances.gpu_address();
 
     VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
     build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -66,13 +65,18 @@ Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer instances,
 
     Opt<Buffer> structure_buf =
         memory->make(build_sizes.accelerationStructureSize,
-                     VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR);
-    if(!structure_buf.ok()) return {};
+                     VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+                         VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    if(!structure_buf.ok()) {
+        return {};
+    }
 
     Opt<Buffer> scratch =
         memory->make(build_sizes.buildScratchSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
                                                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    if(!scratch.ok()) return {};
+    if(!scratch.ok()) {
+        return {};
+    }
 
     return Opt<Staged>{Staged{move(*structure_buf), move(*scratch), move(instances), n_instances,
                               build_sizes.accelerationStructureSize, move(memory)}};
@@ -174,35 +178,32 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
         Vec<VkAccelerationStructureGeometryKHR, Mregion<R>> geometries(offsets.length());
         Vec<u32, Mregion<R>> triangle_counts(offsets.length());
 
-        VkAccelerationStructureGeometryKHR geom = {};
-        geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        geom.geometry.triangles.sType =
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-        geom.geometry.triangles.vertexStride = 3 * sizeof(f32);
-        geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-
-        u64 base_data = data.gpu_address();
         for(auto& offset : offsets) {
-            geom.geometry.triangles.vertexData.deviceAddress = base_data + offset.vertex;
-            geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;
+
+            VkAccelerationStructureGeometryKHR geom = {};
+            geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+            geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+            geom.geometry.triangles.sType =
+                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+            geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+            geom.geometry.triangles.vertexStride = 3 * sizeof(f32);
+            geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+
             if(offset.transform.ok()) {
-                geom.geometry.triangles.transformData.deviceAddress = base_data + *offset.transform;
+                geom.geometry.triangles.transformData.deviceAddress = 1;
             } else {
                 geom.geometry.triangles.transformData.deviceAddress = 0;
             }
-            geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices);
-
+            geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices - 1);
             geometries.push(geom);
             triangle_counts.push(static_cast<u32>(offset.n_indices / 3));
         }
 
         VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
         build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
-                           VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR;
+        build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR |
+                           VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
         build_info.geometryCount = static_cast<u32>(geometries.length());
         build_info.pGeometries = geometries.data();
         build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
@@ -219,13 +220,18 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
 
         Opt<Buffer> structure_buf =
             memory->make(build_sizes.accelerationStructureSize,
-                         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR);
-        if(!structure_buf.ok()) return {};
+                         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+                             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+        if(!structure_buf.ok()) {
+            return {};
+        }
 
         Opt<Buffer> scratch =
             memory->make(build_sizes.buildScratchSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
                                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        if(!scratch.ok()) return {};
+        if(!scratch.ok()) {
+            return {};
+        }
 
         return Opt{Staged{move(*structure_buf), move(*scratch), move(data),
                           build_sizes.accelerationStructureSize, move(offsets), move(memory)}};
@@ -234,7 +240,9 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
 
 BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
-    if(!buffers.geometry.length()) return {};
+    if(!buffers.geometry.length()) {
+        return {};
+    }
 
     // Create acceleration structure
 
@@ -256,26 +264,29 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
         Vec<VkAccelerationStructureGeometryKHR, Mregion<R>> geometries(buffers.offsets.length());
         Vec<VkAccelerationStructureBuildRangeInfoKHR, Mregion<R>> ranges(buffers.offsets.length());
 
-        VkAccelerationStructureGeometryKHR geom = {};
-        geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        geom.geometry.triangles.sType =
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-        geom.geometry.triangles.vertexStride = 3 * sizeof(f32);
-        geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-
-        VkAccelerationStructureBuildRangeInfoKHR range = {};
-
         u64 base_data = buffers.geometry.gpu_address();
+
         for(auto& offset : buffers.offsets) {
+            VkAccelerationStructureGeometryKHR geom = {};
+            geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+            geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+            geom.geometry.triangles.sType =
+                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+            geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+            geom.geometry.triangles.vertexStride = 3 * sizeof(f32);
+            geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+
+            VkAccelerationStructureBuildRangeInfoKHR range = {};
+
             geom.geometry.triangles.vertexData.deviceAddress = base_data + offset.vertex;
             geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;
             if(offset.transform.ok()) {
                 geom.geometry.triangles.transformData.deviceAddress = base_data + *offset.transform;
+            } else {
+                geom.geometry.triangles.transformData.deviceAddress = 0;
             }
-            geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices);
+            geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices - 1);
             geometries.push(geom);
 
             range.primitiveCount = static_cast<u32>(offset.n_indices / 3);
@@ -284,8 +295,8 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
         VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
         build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
-                           VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR;
+        build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR |
+                           VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
         build_info.geometryCount = static_cast<u32>(geometries.length());
         build_info.pGeometries = geometries.data();
         build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
