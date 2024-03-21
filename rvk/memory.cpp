@@ -358,7 +358,7 @@ Sampler& Sampler::operator=(Sampler&& src) {
 
 Buffer::Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkBuffer buffer,
                u64 len)
-    : memory(move(memory)), buffer(buffer), address(address), len(len) {
+    : memory(move(memory)), buffer(buffer), len(len), address(address) {
 }
 
 Buffer::~Buffer() {
