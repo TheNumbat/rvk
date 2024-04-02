@@ -6,147 +6,155 @@
 
 static VkPhysicalDeviceFeatures2* baseline_features(bool ray_tracing, bool robustness) {
 
-    static VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR ray_position_fetch_features = {};
-    ray_position_fetch_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR;
-    ray_position_fetch_features.rayTracingPositionFetch = VK_TRUE;
+    static VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR ray_position_fetch_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR,
+        .rayTracingPositionFetch = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR ray_maintain_features = {};
-    ray_maintain_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR;
-    ray_maintain_features.pNext = &ray_position_fetch_features;
-    ray_maintain_features.rayTracingMaintenance1 = VK_TRUE;
-    ray_maintain_features.rayTracingPipelineTraceRaysIndirect2 = VK_TRUE;
+    static VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR ray_maintain_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR,
+        .pNext = &ray_position_fetch_features,
+        .rayTracingMaintenance1 = VK_TRUE,
+        .rayTracingPipelineTraceRaysIndirect2 = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {};
-    ray_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
-    ray_query_features.pNext = &ray_maintain_features;
-    ray_query_features.rayQuery = VK_TRUE;
+    static VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+        .pNext = &ray_maintain_features,
+        .rayQuery = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_pipeline_features = {};
-    ray_pipeline_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-    ray_pipeline_features.pNext = &ray_query_features;
-    ray_pipeline_features.rayTracingPipeline = VK_TRUE;
-    ray_pipeline_features.rayTracingPipelineTraceRaysIndirect = VK_TRUE;
-    ray_pipeline_features.rayTraversalPrimitiveCulling = VK_TRUE;
+    static VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_pipeline_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+        .pNext = &ray_query_features,
+        .rayTracingPipeline = VK_TRUE,
+        .rayTracingPipelineTraceRaysIndirect = VK_TRUE,
+        .rayTraversalPrimitiveCulling = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceAccelerationStructureFeaturesKHR ray_accel_features = {};
-    ray_accel_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-    ray_accel_features.pNext = &ray_pipeline_features;
-    ray_accel_features.accelerationStructure = VK_TRUE;
-    ray_accel_features.accelerationStructureCaptureReplay = VK_TRUE;
+    static VkPhysicalDeviceAccelerationStructureFeaturesKHR ray_accel_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+        .pNext = &ray_pipeline_features,
+        .accelerationStructure = VK_TRUE,
+        .accelerationStructureCaptureReplay = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceShaderClockFeaturesKHR shader_clock_features = {};
-    shader_clock_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
-    if(ray_tracing) {
-        shader_clock_features.pNext = &ray_accel_features;
-    }
-    shader_clock_features.shaderSubgroupClock = VK_TRUE;
-    shader_clock_features.shaderDeviceClock = VK_TRUE;
+    static VkPhysicalDeviceShaderClockFeaturesKHR shader_clock_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR,
+        .pNext = ray_tracing ? &ray_accel_features : null,
+        .shaderSubgroupClock = VK_TRUE,
+        .shaderDeviceClock = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceVulkan13Features vk13_features = {};
-    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    vk13_features.pNext = &shader_clock_features;
-    vk13_features.robustImageAccess = robustness;
-    vk13_features.synchronization2 = VK_TRUE;
-    vk13_features.dynamicRendering = VK_TRUE;
-    vk13_features.maintenance4 = VK_TRUE;
+    static VkPhysicalDeviceVulkan13Features vk13_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext = &shader_clock_features,
+        .robustImageAccess = robustness,
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE,
+        .maintenance4 = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceVulkan12Features vk12_features = {};
-    vk12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-    vk12_features.pNext = &vk13_features;
-    vk12_features.drawIndirectCount = VK_TRUE;
-    vk12_features.storageBuffer8BitAccess = VK_TRUE;
-    vk12_features.uniformAndStorageBuffer8BitAccess = VK_TRUE;
-    vk12_features.shaderBufferInt64Atomics = VK_TRUE;
-    vk12_features.shaderSharedInt64Atomics = VK_TRUE;
-    vk12_features.shaderFloat16 = VK_TRUE;
-    vk12_features.shaderInt8 = VK_TRUE;
-    vk12_features.descriptorIndexing = VK_TRUE;
-    vk12_features.shaderInputAttachmentArrayDynamicIndexing = VK_TRUE;
-    vk12_features.shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE;
-    vk12_features.shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE;
-    vk12_features.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
-    vk12_features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-    vk12_features.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
-    vk12_features.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
-    vk12_features.shaderInputAttachmentArrayNonUniformIndexing = VK_TRUE;
-    vk12_features.shaderUniformTexelBufferArrayNonUniformIndexing = VK_TRUE;
-    vk12_features.shaderStorageTexelBufferArrayNonUniformIndexing = VK_TRUE;
-    vk12_features.descriptorBindingPartiallyBound = VK_TRUE;
-    vk12_features.descriptorBindingVariableDescriptorCount = VK_TRUE;
-    vk12_features.runtimeDescriptorArray = VK_TRUE;
-    vk12_features.scalarBlockLayout = VK_TRUE;
-    vk12_features.imagelessFramebuffer = VK_TRUE;
-    vk12_features.uniformBufferStandardLayout = VK_TRUE;
-    vk12_features.separateDepthStencilLayouts = VK_TRUE;
-    vk12_features.bufferDeviceAddress = VK_TRUE;
-    vk12_features.vulkanMemoryModel = VK_TRUE;
-    vk12_features.vulkanMemoryModelDeviceScope = VK_TRUE;
+    static VkPhysicalDeviceVulkan12Features vk12_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext = &vk13_features,
+        .drawIndirectCount = VK_TRUE,
+        .storageBuffer8BitAccess = VK_TRUE,
+        .uniformAndStorageBuffer8BitAccess = VK_TRUE,
+        .shaderBufferInt64Atomics = VK_TRUE,
+        .shaderSharedInt64Atomics = VK_TRUE,
+        .shaderFloat16 = VK_TRUE,
+        .shaderInt8 = VK_TRUE,
+        .descriptorIndexing = VK_TRUE,
+        .shaderInputAttachmentArrayDynamicIndexing = VK_TRUE,
+        .shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE,
+        .shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE,
+        .shaderUniformBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageImageArrayNonUniformIndexing = VK_TRUE,
+        .shaderInputAttachmentArrayNonUniformIndexing = VK_TRUE,
+        .shaderUniformTexelBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageTexelBufferArrayNonUniformIndexing = VK_TRUE,
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .descriptorBindingVariableDescriptorCount = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
+        .scalarBlockLayout = VK_TRUE,
+        .imagelessFramebuffer = VK_TRUE,
+        .uniformBufferStandardLayout = VK_TRUE,
+        .separateDepthStencilLayouts = VK_TRUE,
+        .bufferDeviceAddress = VK_TRUE,
+        .vulkanMemoryModel = VK_TRUE,
+        .vulkanMemoryModelDeviceScope = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceVulkan11Features vk11_features = {};
-    vk11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-    vk11_features.pNext = &vk12_features;
-    vk11_features.storageBuffer16BitAccess = VK_TRUE;
-    vk11_features.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-    vk11_features.variablePointersStorageBuffer = VK_TRUE;
-    vk11_features.variablePointers = VK_TRUE;
+    static VkPhysicalDeviceVulkan11Features vk11_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .pNext = &vk12_features,
+        .storageBuffer16BitAccess = VK_TRUE,
+        .uniformAndStorageBuffer16BitAccess = VK_TRUE,
+        .variablePointersStorageBuffer = VK_TRUE,
+        .variablePointers = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceRobustness2FeaturesEXT robust_features = {};
-    robust_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
-    robust_features.pNext = &vk11_features;
-    robust_features.robustBufferAccess2 = robustness;
-    robust_features.robustImageAccess2 = robustness;
-    robust_features.nullDescriptor = VK_TRUE;
+    static VkPhysicalDeviceRobustness2FeaturesEXT robust_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+        .pNext = &vk11_features,
+        .robustBufferAccess2 = robustness,
+        .robustImageAccess2 = robustness,
+        .nullDescriptor = VK_TRUE,
+    };
 
-    // static VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_features = {};
-    // memory_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
-    // memory_features.pNext = &robust_features;
-    // memory_features.memoryPriority = VK_TRUE;
+    static VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT,
+        .pNext = &robust_features,
+        .memoryPriority = VK_TRUE,
+    };
 
-    static VkPhysicalDeviceFeatures2 features2 = {};
-    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    // features2.pNext = &memory_features;
-    features2.pNext = &robust_features;
-    features2.features.robustBufferAccess = robustness;
-    features2.features.imageCubeArray = VK_TRUE;
-    features2.features.geometryShader = VK_TRUE;
-    features2.features.tessellationShader = VK_TRUE;
-    features2.features.sampleRateShading = VK_TRUE;
-    features2.features.dualSrcBlend = VK_TRUE;
-    features2.features.logicOp = VK_TRUE;
-    features2.features.multiDrawIndirect = VK_TRUE;
-    features2.features.drawIndirectFirstInstance = VK_TRUE;
-    features2.features.depthClamp = VK_TRUE;
-    features2.features.depthBiasClamp = VK_TRUE;
-    features2.features.fillModeNonSolid = VK_TRUE;
-    features2.features.depthBounds = VK_TRUE;
-    features2.features.wideLines = VK_TRUE;
-    features2.features.largePoints = VK_TRUE;
-    features2.features.samplerAnisotropy = VK_TRUE;
-    features2.features.occlusionQueryPrecise = VK_TRUE;
-    features2.features.pipelineStatisticsQuery = VK_TRUE;
-    features2.features.vertexPipelineStoresAndAtomics = VK_TRUE;
-    features2.features.fragmentStoresAndAtomics = VK_TRUE;
-    features2.features.shaderTessellationAndGeometryPointSize = VK_TRUE;
-    features2.features.shaderImageGatherExtended = VK_TRUE;
-    features2.features.shaderStorageImageExtendedFormats = VK_TRUE;
-    features2.features.shaderStorageImageMultisample = VK_TRUE;
-    features2.features.shaderStorageImageReadWithoutFormat = VK_TRUE;
-    features2.features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
-    features2.features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
-    features2.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
-    features2.features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
-    features2.features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
-    features2.features.shaderClipDistance = VK_TRUE;
-    features2.features.shaderCullDistance = VK_TRUE;
-    features2.features.shaderFloat64 = VK_TRUE;
-    features2.features.shaderInt64 = VK_TRUE;
-    features2.features.shaderInt16 = VK_TRUE;
-    features2.features.shaderResourceResidency = VK_TRUE;
-    features2.features.shaderResourceMinLod = VK_TRUE;
+    static VkPhysicalDeviceFeatures2 features2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &memory_features,
+        .features =
+            {
+                .robustBufferAccess = robustness,
+                .imageCubeArray = VK_TRUE,
+                .geometryShader = VK_TRUE,
+                .tessellationShader = VK_TRUE,
+                .sampleRateShading = VK_TRUE,
+                .dualSrcBlend = VK_TRUE,
+                .logicOp = VK_TRUE,
+                .multiDrawIndirect = VK_TRUE,
+                .drawIndirectFirstInstance = VK_TRUE,
+                .depthClamp = VK_TRUE,
+                .depthBiasClamp = VK_TRUE,
+                .fillModeNonSolid = VK_TRUE,
+                .depthBounds = VK_TRUE,
+                .wideLines = VK_TRUE,
+                .largePoints = VK_TRUE,
+                .samplerAnisotropy = VK_TRUE,
+                .occlusionQueryPrecise = VK_TRUE,
+                .pipelineStatisticsQuery = VK_TRUE,
+                .vertexPipelineStoresAndAtomics = VK_TRUE,
+                .fragmentStoresAndAtomics = VK_TRUE,
+                .shaderTessellationAndGeometryPointSize = VK_TRUE,
+                .shaderImageGatherExtended = VK_TRUE,
+                .shaderStorageImageExtendedFormats = VK_TRUE,
+                .shaderStorageImageMultisample = VK_TRUE,
+                .shaderStorageImageReadWithoutFormat = VK_TRUE,
+                .shaderStorageImageWriteWithoutFormat = VK_TRUE,
+                .shaderUniformBufferArrayDynamicIndexing = VK_TRUE,
+                .shaderSampledImageArrayDynamicIndexing = VK_TRUE,
+                .shaderStorageBufferArrayDynamicIndexing = VK_TRUE,
+                .shaderStorageImageArrayDynamicIndexing = VK_TRUE,
+                .shaderClipDistance = VK_TRUE,
+                .shaderCullDistance = VK_TRUE,
+                .shaderFloat64 = VK_TRUE,
+                .shaderInt64 = VK_TRUE,
+                .shaderInt16 = VK_TRUE,
+                .shaderResourceResidency = VK_TRUE,
+                .shaderResourceMinLod = VK_TRUE,
+            },
+    };
 
     return &features2;
 }
@@ -175,19 +183,20 @@ Physical_Device::Physical_Device(VkPhysicalDevice PD) : device(PD) {
                                                        available_extensions.data()));
     }
     {
-        properties_.memory.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+        properties_.memory = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
         vkGetPhysicalDeviceMemoryProperties2(device, &properties_.memory);
     }
     {
-        properties_.device.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-        properties_.maintenance3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
-        properties_.maintenance4.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES;
-        properties_.ray_tracing.sType =
-            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
-
-        properties_.device.pNext = &properties_.maintenance3;
-        properties_.maintenance3.pNext = &properties_.maintenance4;
-        properties_.maintenance4.pNext = &properties_.ray_tracing;
+        properties_.device = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+                              .pNext = &properties_.maintenance3};
+        properties_.maintenance3 = {.sType =
+                                        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES,
+                                    .pNext = &properties_.maintenance4};
+        properties_.maintenance4 = {.sType =
+                                        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES,
+                                    .pNext = &properties_.ray_tracing};
+        properties_.ray_tracing = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
 
         vkGetPhysicalDeviceProperties2(device, &properties_.device);
     }
@@ -292,12 +301,14 @@ u64 Physical_Device::heap_size(u32 heap) {
 Pair<u64, u64> Physical_Device::heap_stat(u32 heap) {
     u32 heap_idx = properties_.memory.memoryProperties.memoryTypes[heap].heapIndex;
 
-    VkPhysicalDeviceMemoryBudgetPropertiesEXT budget = {};
-    budget.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
+    VkPhysicalDeviceMemoryBudgetPropertiesEXT budget = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT,
+    };
 
-    VkPhysicalDeviceMemoryProperties2KHR mem_props = {};
-    mem_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2_KHR;
-    mem_props.pNext = &budget;
+    VkPhysicalDeviceMemoryProperties2KHR mem_props = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2_KHR,
+        .pNext = &budget,
+    };
 
     vkGetPhysicalDeviceMemoryProperties2(device, &mem_props);
 
@@ -390,11 +401,12 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
                 n_graphics_queues + n_compute_queues + n_transfer_queues + 1);
             {
                 {
-                    VkDeviceQueueCreateInfo qinfo = {};
-                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                    qinfo.queueFamilyIndex = graphics_family_index;
-                    qinfo.queueCount = n_graphics_queues;
-                    qinfo.pQueuePriorities = priorities.data();
+                    VkDeviceQueueCreateInfo qinfo = {
+                        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                        .queueFamilyIndex = graphics_family_index,
+                        .queueCount = n_graphics_queues,
+                        .pQueuePriorities = priorities.data(),
+                    };
                     queue_infos.push(qinfo);
                 }
 
@@ -403,31 +415,34 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
                 }
 
                 if(compute_family_index != graphics_family_index) {
-                    VkDeviceQueueCreateInfo qinfo = {};
-                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                    qinfo.queueFamilyIndex = compute_family_index;
-                    qinfo.queueCount = n_compute_queues;
-                    qinfo.pQueuePriorities = priorities.data();
+                    VkDeviceQueueCreateInfo qinfo = {
+                        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                        .queueFamilyIndex = compute_family_index,
+                        .queueCount = n_compute_queues,
+                        .pQueuePriorities = priorities.data(),
+                    };
                     queue_infos.push(qinfo);
                 } else {
                     info("[rvk] Using graphics queue family as compute queue family.");
                 }
                 if(transfer_family_index != graphics_family_index) {
-                    VkDeviceQueueCreateInfo qinfo = {};
-                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                    qinfo.queueFamilyIndex = transfer_family_index;
-                    qinfo.queueCount = n_transfer_queues;
-                    qinfo.pQueuePriorities = priorities.data();
+                    VkDeviceQueueCreateInfo qinfo = {
+                        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                        .queueFamilyIndex = transfer_family_index,
+                        .queueCount = n_transfer_queues,
+                        .pQueuePriorities = priorities.data(),
+                    };
                     queue_infos.push(qinfo);
                 } else {
                     info("[rvk] Using graphics queue family as transfer queue family.");
                 }
                 if(present_family_index != graphics_family_index) {
-                    VkDeviceQueueCreateInfo qinfo = {};
-                    qinfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                    qinfo.queueFamilyIndex = present_family_index;
-                    qinfo.queueCount = 1;
-                    qinfo.pQueuePriorities = priorities.data();
+                    VkDeviceQueueCreateInfo qinfo = {
+                        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                        .queueFamilyIndex = present_family_index,
+                        .queueCount = 1,
+                        .pQueuePriorities = priorities.data(),
+                    };
                     queue_infos.push(qinfo);
                 } else {
                     info("[rvk] Using graphics queue family as present queue family.");
@@ -451,13 +466,14 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
             // Create device
 
             {
-                VkDeviceCreateInfo dev_info = {};
-                dev_info.pNext = baseline_features(ray_tracing, robustness);
-                dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-                dev_info.queueCreateInfoCount = static_cast<u32>(queue_infos.length());
-                dev_info.pQueueCreateInfos = queue_infos.data();
-                dev_info.enabledExtensionCount = static_cast<u32>(vk_extensions.length());
-                dev_info.ppEnabledExtensionNames = vk_extensions.data();
+                VkDeviceCreateInfo dev_info = {
+                    .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                    .pNext = baseline_features(ray_tracing, robustness),
+                    .queueCreateInfoCount = static_cast<u32>(queue_infos.length()),
+                    .pQueueCreateInfos = queue_infos.data(),
+                    .enabledExtensionCount = static_cast<u32>(vk_extensions.length()),
+                    .ppEnabledExtensionNames = vk_extensions.data(),
+                };
 
                 RVK_CHECK(vkCreateDevice(*physical_device, &dev_info, null, &device));
             }
@@ -474,8 +490,9 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
             compute_qs.resize(n_compute_queues);
             transfer_qs.resize(n_transfer_queues);
 
-            VkDeviceQueueInfo2 info = {};
-            info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+            VkDeviceQueueInfo2 info = {
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
+            };
 
             info.queueFamilyIndex = graphics_family_index;
             for(u32 i = 0; i < n_graphics_queues; i++) {
@@ -628,14 +645,16 @@ void Device::wait_idle() {
 
 void Device::submit(Commands& cmds, u32 index) {
 
-    VkCommandBufferSubmitInfo cmd_info = {};
-    cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-    cmd_info.commandBuffer = cmds;
+    VkCommandBufferSubmitInfo cmd_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = cmds,
+    };
 
-    VkSubmitInfo2 submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    submit_info.commandBufferInfoCount = 1;
-    submit_info.pCommandBufferInfos = &cmd_info;
+    VkSubmitInfo2 submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &cmd_info,
+    };
 
     {
         Thread::Lock lock(mutex);
@@ -645,14 +664,16 @@ void Device::submit(Commands& cmds, u32 index) {
 
 void Device::submit(Commands& cmds, u32 index, Fence& fence) {
 
-    VkCommandBufferSubmitInfo cmd_info = {};
-    cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-    cmd_info.commandBuffer = cmds;
+    VkCommandBufferSubmitInfo cmd_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = cmds,
+    };
 
-    VkSubmitInfo2 submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    submit_info.commandBufferInfoCount = 1;
-    submit_info.pCommandBufferInfos = &cmd_info;
+    VkSubmitInfo2 submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &cmd_info,
+    };
 
     fence.reset();
     {
@@ -669,32 +690,36 @@ void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_
         Vec<VkSemaphoreSubmitInfo, Mregion<R>> vk_wait(wait.length());
 
         for(u64 i = 0; i < signal.length(); i++) {
-            VkSemaphoreSubmitInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            info.semaphore = *signal[i].sem;
-            info.stageMask = signal[i].stage;
+            VkSemaphoreSubmitInfo info = {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = *signal[i].sem,
+                .stageMask = signal[i].stage,
+            };
             vk_signal.push(info);
         }
         for(u64 i = 0; i < wait.length(); i++) {
-            VkSemaphoreSubmitInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            info.semaphore = *wait[i].sem;
-            info.stageMask = wait[i].stage;
+            VkSemaphoreSubmitInfo info = {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = *wait[i].sem,
+                .stageMask = wait[i].stage,
+            };
             vk_wait.push(info);
         }
 
-        VkCommandBufferSubmitInfo cmd_info = {};
-        cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-        cmd_info.commandBuffer = cmds;
+        VkCommandBufferSubmitInfo cmd_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = cmds,
+        };
 
-        VkSubmitInfo2 submit_info = {};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-        submit_info.commandBufferInfoCount = 1;
-        submit_info.pCommandBufferInfos = &cmd_info;
-        submit_info.signalSemaphoreInfoCount = static_cast<u32>(vk_signal.length());
-        submit_info.pSignalSemaphoreInfos = vk_signal.data();
-        submit_info.waitSemaphoreInfoCount = static_cast<u32>(vk_wait.length());
-        submit_info.pWaitSemaphoreInfos = vk_wait.data();
+        VkSubmitInfo2 submit_info = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .waitSemaphoreInfoCount = static_cast<u32>(vk_wait.length()),
+            .pWaitSemaphoreInfos = vk_wait.data(),
+            .commandBufferInfoCount = 1,
+            .pCommandBufferInfos = &cmd_info,
+            .signalSemaphoreInfoCount = static_cast<u32>(vk_signal.length()),
+            .pSignalSemaphoreInfos = vk_signal.data(),
+        };
 
         {
             Thread::Lock lock(mutex);
@@ -712,32 +737,36 @@ void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_
         Vec<VkSemaphoreSubmitInfo, Mregion<R>> vk_wait(wait.length());
 
         for(u64 i = 0; i < signal.length(); i++) {
-            VkSemaphoreSubmitInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            info.semaphore = *signal[i].sem;
-            info.stageMask = signal[i].stage;
+            VkSemaphoreSubmitInfo info = {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = *signal[i].sem,
+                .stageMask = signal[i].stage,
+            };
             vk_signal.push(info);
         }
         for(u64 i = 0; i < wait.length(); i++) {
-            VkSemaphoreSubmitInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            info.semaphore = *wait[i].sem;
-            info.stageMask = wait[i].stage;
+            VkSemaphoreSubmitInfo info = {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = *wait[i].sem,
+                .stageMask = wait[i].stage,
+            };
             vk_wait.push(info);
         }
 
-        VkCommandBufferSubmitInfo cmd_info = {};
-        cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-        cmd_info.commandBuffer = cmds;
+        VkCommandBufferSubmitInfo cmd_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = cmds,
+        };
 
-        VkSubmitInfo2 submit_info = {};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-        submit_info.commandBufferInfoCount = 1;
-        submit_info.pCommandBufferInfos = &cmd_info;
-        submit_info.signalSemaphoreInfoCount = static_cast<u32>(vk_signal.length());
-        submit_info.pSignalSemaphoreInfos = vk_signal.data();
-        submit_info.waitSemaphoreInfoCount = static_cast<u32>(vk_wait.length());
-        submit_info.pWaitSemaphoreInfos = vk_wait.data();
+        VkSubmitInfo2 submit_info = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .waitSemaphoreInfoCount = static_cast<u32>(vk_wait.length()),
+            .pWaitSemaphoreInfos = vk_wait.data(),
+            .commandBufferInfoCount = 1,
+            .pCommandBufferInfos = &cmd_info,
+            .signalSemaphoreInfoCount = static_cast<u32>(vk_signal.length()),
+            .pSignalSemaphoreInfos = vk_signal.data(),
+        };
 
         fence.reset();
         {

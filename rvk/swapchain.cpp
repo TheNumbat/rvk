@@ -35,9 +35,19 @@ Swapchain::Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_devic
 
     info("[rvk] Creating swapchain with dimensions %x%...", extent_.width, extent_.height);
 
-    VkSwapchainCreateInfoKHR sw_info = {};
-    sw_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    sw_info.surface = surface;
+    VkSwapchainCreateInfoKHR sw_info = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = surface,
+        .imageFormat = surface_format.format,
+        .imageColorSpace = surface_format.colorSpace,
+        .imageExtent = extent_,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = present_mode,
+        .clipped = VK_TRUE,
+    };
 
     Log_Indent {
         min_images = capabilities.minImageCount;
@@ -63,12 +73,6 @@ Swapchain::Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_devic
         sw_info.minImageCount = images;
     }
 
-    sw_info.imageFormat = surface_format.format;
-    sw_info.imageColorSpace = surface_format.colorSpace;
-    sw_info.imageExtent = extent_;
-    sw_info.imageArrayLayers = 1;
-    sw_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
     Array<u32, 2> queue_indices{*physical_device->queue_index(Queue_Family::graphics),
                                 *physical_device->present_queue_index(surface)};
 
@@ -83,11 +87,6 @@ Swapchain::Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_devic
 
         sw_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
-
-    sw_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    sw_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    sw_info.presentMode = present_mode;
-    sw_info.clipped = VK_TRUE;
 
     RVK_CHECK(vkCreateSwapchainKHR(*device, &sw_info, null, &swapchain));
 
@@ -271,94 +270,111 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
                                                Shader& f) {
 
     static Array<VkPipelineShaderStageCreateInfo, 2> stages;
-    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    stages[0].module = v;
-    stages[0].pName = "main";
-    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stages[1].module = f;
-    stages[1].pName = "main";
+    stages[0] = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = v,
+        .pName = "main",
+    };
+    stages[1] = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = f,
+        .pName = "main",
+    };
 
-    static VkPipelineVertexInputStateCreateInfo v_in_info = {};
-    v_in_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    static VkPipelineVertexInputStateCreateInfo v_in_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    };
 
-    static VkPipelineInputAssemblyStateCreateInfo in_asm_info = {};
-    in_asm_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    in_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-    in_asm_info.primitiveRestartEnable = VK_FALSE;
+    static VkPipelineInputAssemblyStateCreateInfo in_asm_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+        .primitiveRestartEnable = VK_FALSE,
+    };
 
     VkExtent2D extent = swapchain->extent();
-    static VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<f32>(extent.width);
-    viewport.height = static_cast<f32>(extent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
 
-    static VkRect2D scissor = {};
-    scissor.offset = {0, 0};
-    scissor.extent = extent;
+    static VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<f32>(extent.width),
+        .height = static_cast<f32>(extent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
 
-    static VkPipelineViewportStateCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    view_info.viewportCount = 1;
-    view_info.pViewports = &viewport;
-    view_info.scissorCount = 1;
-    view_info.pScissors = &scissor;
+    static VkRect2D scissor = {
+        .offset = {0, 0},
+        .extent = extent,
+    };
 
-    static VkPipelineRasterizationStateCreateInfo raster_info = {};
-    raster_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    raster_info.depthClampEnable = VK_FALSE;
-    raster_info.rasterizerDiscardEnable = VK_FALSE;
-    raster_info.polygonMode = VK_POLYGON_MODE_FILL;
-    raster_info.lineWidth = 1.0f;
-    raster_info.cullMode = VK_CULL_MODE_BACK_BIT;
-    raster_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    raster_info.depthBiasEnable = VK_FALSE;
+    static VkPipelineViewportStateCreateInfo view_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .pViewports = &viewport,
+        .scissorCount = 1,
+        .pScissors = &scissor,
+    };
 
-    static VkPipelineMultisampleStateCreateInfo msaa_info = {};
-    msaa_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    msaa_info.sampleShadingEnable = VK_FALSE;
-    msaa_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    static VkPipelineRasterizationStateCreateInfo raster_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .lineWidth = 1.0f,
+    };
 
-    static VkPipelineColorBlendAttachmentState color_blend = {};
-    color_blend.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    color_blend.blendEnable = VK_TRUE;
-    color_blend.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    color_blend.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    color_blend.colorBlendOp = VK_BLEND_OP_ADD;
-    color_blend.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    color_blend.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    color_blend.alphaBlendOp = VK_BLEND_OP_ADD;
+    static VkPipelineMultisampleStateCreateInfo msaa_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE,
+    };
 
-    static VkPipelineColorBlendStateCreateInfo blend_info = {};
-    blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    blend_info.logicOpEnable = VK_FALSE;
-    blend_info.logicOp = VK_LOGIC_OP_COPY;
-    blend_info.attachmentCount = 1;
-    blend_info.pAttachments = &color_blend;
+    static VkPipelineColorBlendAttachmentState color_blend = {
+        .blendEnable = VK_TRUE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
+
+    static VkPipelineColorBlendStateCreateInfo blend_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .logicOp = VK_LOGIC_OP_COPY,
+        .attachmentCount = 1,
+        .pAttachments = &color_blend,
+    };
 
     static VkFormat format = {};
-    static VkPipelineRenderingCreateInfo dynamic_info = {};
-    dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    dynamic_info.colorAttachmentCount = 1;
     format = swapchain->format();
-    dynamic_info.pColorAttachmentFormats = &format;
 
-    VkGraphicsPipelineCreateInfo pipeline_info = {};
-    pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_info.pNext = &dynamic_info;
-    pipeline_info.stageCount = static_cast<u32>(stages.length());
-    pipeline_info.pStages = stages.data();
-    pipeline_info.pVertexInputState = &v_in_info;
-    pipeline_info.pInputAssemblyState = &in_asm_info;
-    pipeline_info.pViewportState = &view_info;
-    pipeline_info.pRasterizationState = &raster_info;
-    pipeline_info.pMultisampleState = &msaa_info;
-    pipeline_info.pColorBlendState = &blend_info;
+    static VkPipelineRenderingCreateInfo dynamic_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &format,
+    };
+
+    VkGraphicsPipelineCreateInfo pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &dynamic_info,
+        .stageCount = static_cast<u32>(stages.length()),
+        .pStages = stages.data(),
+        .pVertexInputState = &v_in_info,
+        .pInputAssemblyState = &in_asm_info,
+        .pViewportState = &view_info,
+        .pRasterizationState = &raster_info,
+        .pMultisampleState = &msaa_info,
+        .pColorBlendState = &blend_info,
+    };
 
     static Ref<Descriptor_Set_Layout> layout_ref;
     layout_ref = Ref{layout};
@@ -484,20 +500,27 @@ static VkImageView swapchain_image_view(VkDevice device, VkImage image, VkFormat
 
     VkImageView view = null;
 
-    VkImageViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = image;
-    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_info.format = format;
-    view_info.components.r = VK_COMPONENT_SWIZZLE_R;
-    view_info.components.g = VK_COMPONENT_SWIZZLE_G;
-    view_info.components.b = VK_COMPONENT_SWIZZLE_B;
-    view_info.components.a = VK_COMPONENT_SWIZZLE_A;
-    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = 1;
-    view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
+    VkImageViewCreateInfo view_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+        .components =
+            {
+                .r = VK_COMPONENT_SWIZZLE_R,
+                .g = VK_COMPONENT_SWIZZLE_G,
+                .b = VK_COMPONENT_SWIZZLE_B,
+                .a = VK_COMPONENT_SWIZZLE_A,
+            },
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
 
     RVK_CHECK(vkCreateImageView(device, &view_info, null, &view));
     return view;
@@ -505,28 +528,33 @@ static VkImageView swapchain_image_view(VkDevice device, VkImage image, VkFormat
 
 static void swapchain_image_setup(Commands& commands, VkImage image) {
 
-    VkImageMemoryBarrier2 barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-    barrier.srcAccessMask = VK_ACCESS_2_NONE;
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_2_NONE;
+    VkImageMemoryBarrier2 barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+        .srcAccessMask = VK_ACCESS_2_NONE,
+        .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+        .dstAccessMask = VK_ACCESS_2_NONE,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image,
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
 
-    VkDependencyInfo dependency = {};
-    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependency.imageMemoryBarrierCount = 1;
-    dependency.pImageMemoryBarriers = &barrier;
-    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    VkDependencyInfo dependency = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier,
+    };
 
     vkCmdPipelineBarrier2(commands, &dependency);
 }

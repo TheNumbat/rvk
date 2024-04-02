@@ -29,12 +29,13 @@ Descriptor_Pool::Descriptor_Pool(Arc<Device, Alloc> D, u32 bindings_per_type, bo
             sizes.push(VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
                                             bindings_per_type});
 
-        VkDescriptorPoolCreateInfo pool_info = {};
-        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool_info.poolSizeCount = static_cast<u32>(sizes.length());
-        pool_info.pPoolSizes = sizes.data();
-        pool_info.maxSets = static_cast<u32>(sizes.length()) * bindings_per_type;
-        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        VkDescriptorPoolCreateInfo pool_info = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+            .maxSets = static_cast<u32>(sizes.length()) * bindings_per_type,
+            .poolSizeCount = static_cast<u32>(sizes.length()),
+            .pPoolSizes = sizes.data(),
+        };
 
         Thread::Lock lock(mutex);
         RVK_CHECK(vkCreateDescriptorPool(*device, &pool_info, null, &pool));

@@ -38,24 +38,28 @@ Opt<TLAS::Staged> TLAS::make(Arc<Device_Memory, Alloc> memory, Buffer instances,
 
     // Compute necessary sizes for the buffers
 
-    VkAccelerationStructureGeometryKHR geom = {};
-    geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-    geom.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-    geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-    geom.geometry.instances.sType =
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-    geom.geometry.instances.arrayOfPointers = VK_FALSE;
+    VkAccelerationStructureGeometryKHR geom = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+        .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+        .geometry =
+            {.instances = {.sType =
+                               VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+                           .arrayOfPointers = VK_FALSE}},
+        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+    };
 
-    VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
-    build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-    build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-    build_info.geometryCount = 1;
-    build_info.pGeometries = &geom;
-    build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    VkAccelerationStructureBuildGeometryInfoKHR build_info = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+        .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+        .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+        .geometryCount = 1,
+        .pGeometries = &geom,
+    };
 
-    VkAccelerationStructureBuildSizesInfoKHR build_sizes = {};
-    build_sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+    VkAccelerationStructureBuildSizesInfoKHR build_sizes = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
+    };
 
     vkGetAccelerationStructureBuildSizesKHR(*memory->device,
                                             VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
@@ -88,42 +92,46 @@ TLAS TLAS::build(Commands& cmds, Staged buffers) {
 
     VkAccelerationStructureKHR acceleration_structure = null;
 
-    VkAccelerationStructureCreateInfoKHR create_info = {};
-    create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-    create_info.size = buffers.result_size;
-    create_info.buffer = buffers.result;
+    VkAccelerationStructureCreateInfoKHR create_info = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+        .buffer = buffers.result,
+        .size = buffers.result_size,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+    };
 
     RVK_CHECK(vkCreateAccelerationStructureKHR(*buffers.memory->device, &create_info, null,
                                                &acceleration_structure));
 
     // Build
 
-    VkAccelerationStructureGeometryKHR geom = {};
-    geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-    geom.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-    geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    VkAccelerationStructureGeometryKHR geom = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+        .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+        .geometry =
+            {.instances = {.sType =
+                               VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+                           .arrayOfPointers = VK_FALSE,
+                           .data = {.deviceAddress = buffers.instances.gpu_address()}}},
+        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+    };
 
-    geom.geometry.instances.sType =
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-    geom.geometry.instances.arrayOfPointers = VK_FALSE;
-    geom.geometry.instances.data.deviceAddress = buffers.instances.gpu_address();
-
-    VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
-    build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-    build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-    build_info.geometryCount = 1;
-    build_info.pGeometries = &geom;
-    build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-    build_info.scratchData.deviceAddress = buffers.scratch.gpu_address();
-    build_info.dstAccelerationStructure = acceleration_structure;
+    VkAccelerationStructureBuildGeometryInfoKHR build_info = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+        .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+        .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+        .dstAccelerationStructure = acceleration_structure,
+        .geometryCount = 1,
+        .pGeometries = &geom,
+        .scratchData = {.deviceAddress = buffers.scratch.gpu_address()},
+    };
 
     cmds.attach(move(buffers.scratch));
     cmds.attach(move(buffers.instances));
 
-    VkAccelerationStructureBuildRangeInfoKHR offset = {};
-    offset.primitiveCount = buffers.n_instances;
+    VkAccelerationStructureBuildRangeInfoKHR offset = {
+        .primitiveCount = buffers.n_instances,
+    };
 
     Array<VkAccelerationStructureBuildRangeInfoKHR*, 1> offsets{&offset};
 
@@ -159,9 +167,10 @@ BLAS& BLAS::operator=(BLAS&& src) {
 
 u64 BLAS::gpu_address() {
     if(!acceleration_structure) return 0;
-    VkAccelerationStructureDeviceAddressInfoKHR info = {};
-    info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-    info.accelerationStructure = acceleration_structure;
+    VkAccelerationStructureDeviceAddressInfoKHR info = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
+        .accelerationStructure = acceleration_structure,
+    };
     return vkGetAccelerationStructureDeviceAddressKHR(*memory->device, &info);
 }
 
@@ -180,37 +189,40 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
 
         for(auto& offset : offsets) {
 
-            VkAccelerationStructureGeometryKHR geom = {};
-            geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-            geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-            geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-            geom.geometry.triangles.sType =
-                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-            geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-            geom.geometry.triangles.vertexStride = 3 * sizeof(f32);
-            geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+            VkAccelerationStructureGeometryKHR geom = {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+                .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+                .geometry =
+                    {.triangles =
+                         {
+                             .sType =
+                                 VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                             .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+                             .vertexStride = 3 * sizeof(f32),
+                             .maxVertex = static_cast<u32>(offset.n_vertices - 1),
+                             .indexType = VK_INDEX_TYPE_UINT32,
+                             .transformData = {.deviceAddress = offset.transform.ok() ? 1u : 0u},
+                         }},
+                .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+            };
 
-            if(offset.transform.ok()) {
-                geom.geometry.triangles.transformData.deviceAddress = 1;
-            } else {
-                geom.geometry.triangles.transformData.deviceAddress = 0;
-            }
-            geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices - 1);
             geometries.push(geom);
             triangle_counts.push(static_cast<u32>(offset.n_indices / 3));
         }
 
-        VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
-        build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR |
-                           VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
-        build_info.geometryCount = static_cast<u32>(geometries.length());
-        build_info.pGeometries = geometries.data();
-        build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-        build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        VkAccelerationStructureBuildGeometryInfoKHR build_info = {
+            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+            .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+            .flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR |
+                     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+            .geometryCount = static_cast<u32>(geometries.length()),
+            .pGeometries = geometries.data(),
+        };
 
-        VkAccelerationStructureBuildSizesInfoKHR build_sizes = {};
-        build_sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+        VkAccelerationStructureBuildSizesInfoKHR build_sizes = {
+            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
+        };
 
         vkGetAccelerationStructureBuildSizesKHR(*memory->device,
                                                 VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
@@ -236,7 +248,7 @@ Opt<BLAS::Staged> BLAS::make(Arc<Device_Memory, Alloc> memory, Buffer data,
         return Opt{Staged{move(*structure_buf), move(*scratch), move(data),
                           build_sizes.accelerationStructureSize, move(offsets), move(memory)}};
     }
-}
+} // namespace rvk::impl
 
 BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
@@ -248,11 +260,12 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
 
     VkAccelerationStructureKHR acceleration_structure = null;
 
-    VkAccelerationStructureCreateInfoKHR create_info = {};
-    create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    create_info.size = buffers.result_size;
-    create_info.buffer = buffers.result;
+    VkAccelerationStructureCreateInfoKHR create_info = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+        .buffer = buffers.result,
+        .size = buffers.result_size,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+    };
 
     vkCreateAccelerationStructureKHR(*buffers.memory->device, &create_info, null,
                                      &acceleration_structure);
@@ -267,42 +280,44 @@ BLAS BLAS::build(Commands& cmds, Staged buffers) {
         u64 base_data = buffers.geometry.gpu_address();
 
         for(auto& offset : buffers.offsets) {
-            VkAccelerationStructureGeometryKHR geom = {};
-            geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-            geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-            geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-            geom.geometry.triangles.sType =
-                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-            geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-            geom.geometry.triangles.vertexStride = 3 * sizeof(f32);
-            geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+            VkAccelerationStructureGeometryKHR geom = {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+                .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+                .geometry =
+                    {.triangles =
+                         {.sType =
+                              VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                          .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+                          .vertexData = {.deviceAddress = base_data + offset.vertex},
+                          .vertexStride = 3 * sizeof(f32),
+                          .maxVertex = static_cast<u32>(offset.n_vertices - 1),
+                          .indexType = VK_INDEX_TYPE_UINT32,
+                          .indexData = {.deviceAddress = base_data + offset.index},
+                          .transformData = {.deviceAddress = offset.transform.ok()
+                                                                 ? base_data + *offset.transform
+                                                                 : 0u}}},
+                .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+            };
 
-            VkAccelerationStructureBuildRangeInfoKHR range = {};
-
-            geom.geometry.triangles.vertexData.deviceAddress = base_data + offset.vertex;
-            geom.geometry.triangles.indexData.deviceAddress = base_data + offset.index;
-            if(offset.transform.ok()) {
-                geom.geometry.triangles.transformData.deviceAddress = base_data + *offset.transform;
-            } else {
-                geom.geometry.triangles.transformData.deviceAddress = 0;
-            }
-            geom.geometry.triangles.maxVertex = static_cast<u32>(offset.n_vertices - 1);
             geometries.push(geom);
 
-            range.primitiveCount = static_cast<u32>(offset.n_indices / 3);
+            VkAccelerationStructureBuildRangeInfoKHR range = {
+                .primitiveCount = static_cast<u32>(offset.n_indices / 3),
+            };
             ranges.push(range);
         }
 
-        VkAccelerationStructureBuildGeometryInfoKHR build_info = {};
-        build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR |
-                           VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
-        build_info.geometryCount = static_cast<u32>(geometries.length());
-        build_info.pGeometries = geometries.data();
-        build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-        build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        build_info.scratchData.deviceAddress = buffers.scratch.gpu_address();
-        build_info.dstAccelerationStructure = acceleration_structure;
+        VkAccelerationStructureBuildGeometryInfoKHR build_info = {
+            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+            .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+            .flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR |
+                     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+            .dstAccelerationStructure = acceleration_structure,
+            .geometryCount = static_cast<u32>(geometries.length()),
+            .pGeometries = geometries.data(),
+            .scratchData = {.deviceAddress = buffers.scratch.gpu_address()},
+        };
 
         cmds.attach(move(buffers.scratch));
         cmds.attach(move(buffers.geometry));

@@ -12,15 +12,18 @@ Device_Memory::Device_Memory(Arc<Physical_Device, Alloc>& physical_device, Arc<D
                              Heap location, u64 heap_size)
     : device(move(D)), location(location), allocator(heap_size) {
 
-    VkMemoryAllocateFlagsInfo flags = {};
-    flags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
-    if(location == Heap::device) flags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+    VkMemoryAllocateFlagsInfo flags = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+        .flags = location == Heap::device ? VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT
+                                          : VkMemoryAllocateFlags{},
+    };
 
-    VkMemoryAllocateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    info.pNext = &flags;
-    info.allocationSize = heap_size;
-    info.memoryTypeIndex = device->heap_index(location);
+    VkMemoryAllocateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = &flags,
+        .allocationSize = heap_size,
+        .memoryTypeIndex = device->heap_index(location),
+    };
 
     RVK_CHECK(vkAllocateMemory(*device, &info, null, &device_memory));
 
@@ -135,18 +138,18 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
 
     VkBuffer buffer = null;
 
-    VkBufferCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    info.size = size;
-    info.usage = usage;
-    info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-
     Array<u32, 3> indices{device->queue_index(Queue_Family::graphics),
                           device->queue_index(Queue_Family::compute),
                           device->queue_index(Queue_Family::transfer)};
 
-    info.pQueueFamilyIndices = indices.data();
-    info.queueFamilyIndexCount = static_cast<u32>(indices.length());
+    VkBufferCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_CONCURRENT,
+        .queueFamilyIndexCount = static_cast<u32>(indices.length()),
+        .pQueueFamilyIndices = indices.data(),
+    };
 
     RVK_CHECK(vkCreateBuffer(*device, &info, null, &buffer));
 
@@ -161,11 +164,12 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
         return {};
     }
 
-    VkBindBufferMemoryInfo bind = {};
-    bind.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
-    bind.memory = device_memory;
-    bind.buffer = buffer;
-    bind.memoryOffset = (*address)->offset;
+    VkBindBufferMemoryInfo bind = {
+        .sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO,
+        .buffer = buffer,
+        .memory = device_memory,
+        .memoryOffset = (*address)->offset,
+    };
 
     RVK_CHECK(vkBindBufferMemory2(*device, 1, &bind));
 
@@ -254,28 +258,34 @@ void Image::transition(Commands& commands, VkImageAspectFlags aspect, VkImageLay
                        VkPipelineStageFlags2 dst_stage, VkAccessFlags2 src_access,
                        VkAccessFlags2 dst_access) {
     assert(image);
-    VkImageMemoryBarrier2 barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    barrier.oldLayout = src_layout;
-    barrier.newLayout = dst_layout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = aspect;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcStageMask = src_stage;
-    barrier.srcAccessMask = src_access;
-    barrier.dstStageMask = dst_stage;
-    barrier.dstAccessMask = dst_access;
 
-    VkDependencyInfo dependency = {};
-    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependency.imageMemoryBarrierCount = 1;
-    dependency.pImageMemoryBarriers = &barrier;
-    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    VkImageMemoryBarrier2 barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = src_stage,
+        .srcAccessMask = src_access,
+        .dstStageMask = dst_stage,
+        .dstAccessMask = dst_access,
+        .oldLayout = src_layout,
+        .newLayout = dst_layout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image,
+        .subresourceRange =
+            {
+                .aspectMask = aspect,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
+
+    VkDependencyInfo dependency = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier,
+    };
 
     vkCmdPipelineBarrier2(commands, &dependency);
 }
@@ -283,20 +293,27 @@ void Image::transition(Commands& commands, VkImageAspectFlags aspect, VkImageLay
 Image_View::Image_View(Image& image, VkImageAspectFlags aspect)
     : device(image.memory->device.dup()), aspect_mask(aspect) {
 
-    VkImageViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = image;
-    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_info.format = image.format();
-    view_info.components.r = VK_COMPONENT_SWIZZLE_R;
-    view_info.components.g = VK_COMPONENT_SWIZZLE_G;
-    view_info.components.b = VK_COMPONENT_SWIZZLE_B;
-    view_info.components.a = VK_COMPONENT_SWIZZLE_A;
-    view_info.subresourceRange.aspectMask = aspect;
-    view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = 1;
-    view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
+    VkImageViewCreateInfo view_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = image.format(),
+        .components =
+            {
+                .r = VK_COMPONENT_SWIZZLE_R,
+                .g = VK_COMPONENT_SWIZZLE_G,
+                .b = VK_COMPONENT_SWIZZLE_B,
+                .a = VK_COMPONENT_SWIZZLE_A,
+            },
+        .subresourceRange =
+            {
+                .aspectMask = aspect,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
 
     RVK_CHECK(vkCreateImageView(*device, &view_info, null, &view));
 }
@@ -323,17 +340,17 @@ Image_View& Image_View::operator=(Image_View&& src) {
 
 Sampler::Sampler(Arc<Device, Alloc> D, VkFilter min, VkFilter mag) : device(move(D)) {
 
-    VkSamplerCreateInfo sample_info = {};
-    sample_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sample_info.minFilter = min;
-    sample_info.magFilter = mag;
-    sample_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sample_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sample_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sample_info.unnormalizedCoordinates = VK_FALSE;
-    sample_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sample_info.minLod = 0.0f;
-    sample_info.maxLod = VK_LOD_CLAMP_NONE;
+    VkSamplerCreateInfo sample_info = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = mag,
+        .minFilter = min,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .minLod = 0.0f,
+        .maxLod = VK_LOD_CLAMP_NONE,
+    };
 
     RVK_CHECK(vkCreateSampler(*device, &sample_info, null, &sampler));
 }
@@ -390,9 +407,10 @@ Buffer& Buffer::operator=(Buffer&& src) {
 
 u64 Buffer::gpu_address() const {
     if(!buffer) return 0;
-    VkBufferDeviceAddressInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-    info.buffer = buffer;
+    VkBufferDeviceAddressInfo info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = buffer,
+    };
     return vkGetBufferDeviceAddress(*memory->device, &info);
 }
 
@@ -416,18 +434,20 @@ void Buffer::copy_from(Commands& commands, Buffer& from) {
     assert(buffer);
     assert(from.length() <= len);
 
-    VkBufferCopy2 region = {};
-    region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-    region.srcOffset = 0;
-    region.dstOffset = 0;
-    region.size = from.length();
+    VkBufferCopy2 region = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+        .srcOffset = 0,
+        .dstOffset = 0,
+        .size = from.length(),
+    };
 
-    VkCopyBufferInfo2 info = {};
-    info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
-    info.srcBuffer = from;
-    info.dstBuffer = buffer;
-    info.regionCount = 1;
-    info.pRegions = &region;
+    VkCopyBufferInfo2 info = {
+        .sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+        .srcBuffer = from,
+        .dstBuffer = buffer,
+        .regionCount = 1,
+        .pRegions = &region,
+    };
 
     vkCmdCopyBuffer2(commands, &info);
 }
@@ -436,18 +456,20 @@ void Buffer::copy_from(Commands& commands, Buffer& src, u64 src_offset, u64 dst_
     assert(buffer);
     assert(dst_offset + size <= len);
 
-    VkBufferCopy2 region = {};
-    region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-    region.srcOffset = src_offset;
-    region.dstOffset = dst_offset;
-    region.size = size;
+    VkBufferCopy2 region = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+        .srcOffset = src_offset,
+        .dstOffset = dst_offset,
+        .size = size,
+    };
 
-    VkCopyBufferInfo2 info = {};
-    info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
-    info.srcBuffer = src;
-    info.dstBuffer = buffer;
-    info.regionCount = 1;
-    info.pRegions = &region;
+    VkCopyBufferInfo2 info = {
+        .sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+        .srcBuffer = src,
+        .dstBuffer = buffer,
+        .regionCount = 1,
+        .pRegions = &region,
+    };
 
     vkCmdCopyBuffer2(commands, &info);
 }

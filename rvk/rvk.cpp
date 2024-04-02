@@ -252,17 +252,18 @@ void Vk::create_imgui() {
 
     Profile::Time_Point start = Profile::timestamp();
 
-    ImGui_ImplVulkan_InitInfo init = {};
-    init.Instance = *instance;
-    init.PhysicalDevice = *physical_device;
-    init.Device = *device;
-    init.QueueFamily = *physical_device->queue_index(Queue_Family::graphics);
-    init.Queue = device->queue(Queue_Family::graphics);
-    init.DescriptorPool = *descriptor_pool;
-    init.MinImageCount = Math::min(2u, swapchain->min_image_count());
-    init.CheckVkResultFn = check;
-    init.UseDynamicRendering = true;
-    init.ColorAttachmentFormat = swapchain->format();
+    ImGui_ImplVulkan_InitInfo init = {
+        .Instance = *instance,
+        .PhysicalDevice = *physical_device,
+        .Device = *device,
+        .QueueFamily = *physical_device->queue_index(Queue_Family::graphics),
+        .Queue = device->queue(Queue_Family::graphics),
+        .DescriptorPool = *descriptor_pool,
+        .MinImageCount = Math::min(2u, swapchain->min_image_count()),
+        .UseDynamicRendering = true,
+        .ColorAttachmentFormat = swapchain->format(),
+        .CheckVkResultFn = check,
+    };
 
     // The ImGui Vulkan backend will create resources for this many frames.
     init.ImageCount = Math::max(init.MinImageCount,
@@ -376,13 +377,14 @@ void Vk::end_frame(Image_View& output) {
     VkSemaphore complete = frame.complete;
     VkSwapchainKHR vk_swapchain = *swapchain;
 
-    VkPresentInfoKHR present_info = {};
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &complete;
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &vk_swapchain;
-    present_info.pImageIndices = &state.swapchain_index;
+    VkPresentInfoKHR present_info = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &complete,
+        .swapchainCount = 1,
+        .pSwapchains = &vk_swapchain,
+        .pImageIndices = &state.swapchain_index,
+    };
 
     // Submit presentation command
     VkResult result = device->present(present_info);

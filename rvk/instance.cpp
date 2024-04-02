@@ -134,13 +134,14 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers,
 
     Log_Indent Region(R) {
 
-        VkApplicationInfo app_info = {};
-        app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        app_info.pApplicationName = "rvk";
-        app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-        app_info.pEngineName = "rvk";
-        app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-        app_info.apiVersion = VK_API_VERSION_1_3;
+        VkApplicationInfo app_info = {
+            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            .pApplicationName = "rvk",
+            .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+            .pEngineName = "rvk",
+            .engineVersion = VK_MAKE_VERSION(0, 0, 1),
+            .apiVersion = VK_API_VERSION_1_3,
+        };
 
         Vec<const char*, Mregion<R>> extension_names;
         for(auto& ext : extensions) {
@@ -162,13 +163,14 @@ Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers,
             layer_names.push("VK_LAYER_KHRONOS_synchronization2");
         }
 
-        VkInstanceCreateInfo create_info = {};
-        create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        create_info.pApplicationInfo = &app_info;
-        create_info.enabledExtensionCount = static_cast<u32>(extension_names.length());
-        create_info.ppEnabledExtensionNames = extension_names.data();
-        create_info.enabledLayerCount = static_cast<u32>(layer_names.length());
-        create_info.ppEnabledLayerNames = layer_names.data();
+        VkInstanceCreateInfo create_info = {
+            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            .pApplicationInfo = &app_info,
+            .enabledLayerCount = static_cast<u32>(layer_names.length()),
+            .ppEnabledLayerNames = layer_names.data(),
+            .enabledExtensionCount = static_cast<u32>(extension_names.length()),
+            .ppEnabledExtensionNames = extension_names.data(),
+        };
 
         VkResult result = vkCreateInstance(&create_info, null, &instance);
 
@@ -405,16 +407,17 @@ Debug_Callback::Debug_Callback(Arc<Instance, Alloc> I) : instance(move(I)) {
 
     Profile::Time_Point start = Profile::timestamp();
 
-    VkDebugUtilsMessengerCreateInfoEXT callback = {};
-    callback.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    callback.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    callback.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                           VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                           VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    callback.pfnUserCallback = &debug_callback;
+    VkDebugUtilsMessengerCreateInfoEXT callback = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+        .pfnUserCallback = &debug_callback,
+    };
 
     RVK_CHECK(vkCreateDebugUtilsMessengerEXT(*instance, &callback, null, &messenger));
 

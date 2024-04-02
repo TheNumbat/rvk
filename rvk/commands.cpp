@@ -15,18 +15,20 @@ using namespace rpp;
 
 Fence::Fence(Arc<Device, Alloc> D) : device(move(D)) {
 
-    VkFenceCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    VkFenceCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
 
-    VkExportFenceCreateInfo export_info = {};
-    export_info.sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO;
+    VkExportFenceCreateInfo export_info = {
+        .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
+        .pNext = &export_info,
 #ifdef RPP_OS_WINDOWS
-    export_info.handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+        .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT,
 #else
-    export_info.handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT;
+        .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT,
 #endif
-    info.pNext = &export_info;
+    };
 
     RVK_CHECK(vkCreateFence(*device, &info, null, &fence));
 }
@@ -63,18 +65,20 @@ Async::Event Fence::event() const {
     assert(fence);
 #ifdef RPP_OS_WINDOWS
     HANDLE handle = null;
-    VkFenceGetWin32HandleInfoKHR info = {};
-    info.sType = VK_STRUCTURE_TYPE_FENCE_GET_WIN32_HANDLE_INFO_KHR;
-    info.fence = fence;
-    info.handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+    VkFenceGetWin32HandleInfoKHR info = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_GET_WIN32_HANDLE_INFO_KHR,
+        .fence = fence,
+        .handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT,
+    };
     RVK_CHECK(vkGetFenceWin32HandleKHR(*device, &info, &handle));
     return Async::Event::of_sys(handle);
 #else
     i32 fd = -1;
-    VkFenceGetFdInfoKHR info = {};
-    info.sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR;
-    info.fence = fence;
-    info.handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT;
+    VkFenceGetFdInfoKHR info = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
+        .fence = fence,
+        .handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT,
+    };
     RVK_CHECK(vkGetFenceFdKHR(*device, &info, &fd));
     return Async::Event::of_sys(fd, EPOLLIN);
 #endif
@@ -90,8 +94,9 @@ bool Fence::ready() const {
 }
 
 Semaphore::Semaphore(Arc<Device, Alloc> D) : device(move(D)) {
-    VkSemaphoreCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    VkSemaphoreCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
     RVK_CHECK(vkCreateSemaphore(*device, &info, null, &semaphore));
 }
 
@@ -155,9 +160,10 @@ void Commands::reset() {
         transient_buffers.clear();
     }
 
-    VkCommandBufferBeginInfo begin_info = {};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VkCommandBufferBeginInfo begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
 
     RVK_CHECK(vkBeginCommandBuffer(buffer, &begin_info));
 }
@@ -188,17 +194,19 @@ Commands Command_Pool::make() {
         free_list.pop();
         vkResetCommandBuffer(buffer, 0);
     } else {
-        VkCommandBufferAllocateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        info.commandPool = command_pool;
-        info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        info.commandBufferCount = 1;
+        VkCommandBufferAllocateInfo info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = command_pool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+        };
         RVK_CHECK(vkAllocateCommandBuffers(*device, &info, &buffer));
     }
 
-    VkCommandBufferBeginInfo begin_info = {};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VkCommandBufferBeginInfo begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
     RVK_CHECK(vkBeginCommandBuffer(buffer, &begin_info));
 
     return Commands{Arc<Command_Pool, Alloc>::from_this(this), family, buffer};
@@ -245,10 +253,11 @@ void Command_Pool_Manager<F>::begin_thread() {
 
         Profile::Time_Point start = Profile::timestamp();
 
-        VkCommandPoolCreateInfo create_info = {};
-        create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        create_info.queueFamilyIndex = device->queue_index(F);
+        VkCommandPoolCreateInfo create_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+            .queueFamilyIndex = device->queue_index(F),
+        };
 
         VkCommandPool pool = null;
         RVK_CHECK(vkCreateCommandPool(*device, &create_info, null, &pool));

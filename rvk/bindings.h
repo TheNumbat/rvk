@@ -46,11 +46,12 @@ struct Sampler {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = 1;
-        write.pImageInfo = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = 1,
+            .descriptorType = type,
+            .pImageInfo = &info,
+        };
         writes.push(write);
     }
 };
@@ -76,11 +77,12 @@ struct Image_And_Sampler {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = 1;
-        write.pImageInfo = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = 1,
+            .descriptorType = type,
+            .pImageInfo = &info,
+        };
         writes.push(write);
     }
 };
@@ -104,11 +106,12 @@ struct Image_Sampled {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = 1;
-        write.pImageInfo = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = 1,
+            .descriptorType = type,
+            .pImageInfo = &info,
+        };
         writes.push(write);
     }
 };
@@ -129,11 +132,12 @@ struct Image_Sampled_Array {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = static_cast<u32>(info.length());
-        write.pImageInfo = reinterpret_cast<const VkDescriptorImageInfo*>(info.data());
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = static_cast<u32>(info.length()),
+            .descriptorType = type,
+            .pImageInfo = reinterpret_cast<const VkDescriptorImageInfo*>(info.data()),
+        };
         writes.push(write);
     }
 };
@@ -157,11 +161,12 @@ struct Image_Storage {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = 1;
-        write.pImageInfo = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = 1,
+            .descriptorType = type,
+            .pImageInfo = &info,
+        };
         writes.push(write);
     }
 };
@@ -187,11 +192,12 @@ struct Buffer_Uniform {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = 1;
-        write.pBufferInfo = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = 1,
+            .descriptorType = type,
+            .pBufferInfo = &info,
+        };
         writes.push(write);
     }
 };
@@ -217,11 +223,12 @@ struct Buffer_Storage {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = 1;
-        write.pBufferInfo = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = 1,
+            .descriptorType = type,
+            .pBufferInfo = &info,
+        };
         writes.push(write);
     }
 };
@@ -249,11 +256,12 @@ struct TLAS {
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorType = type;
-        write.descriptorCount = 1;
-        write.pNext = &info;
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .pNext = &info,
+            .descriptorCount = 1,
+            .descriptorType = type,
+        };
         writes.push(write);
     }
 };

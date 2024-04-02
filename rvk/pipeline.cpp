@@ -21,10 +21,11 @@ static VkPipelineBindPoint bind_point(Pipeline::Kind kind) {
 
 Shader::Shader(Arc<Device, Alloc> D, Slice<u8> source) : device(move(D)) {
 
-    VkShaderModuleCreateInfo mod_info = {};
-    mod_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    mod_info.codeSize = source.length();
-    mod_info.pCode = reinterpret_cast<const uint32_t*>(source.data());
+    VkShaderModuleCreateInfo mod_info = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = source.length(),
+        .pCode = reinterpret_cast<const uint32_t*>(source.data()),
+    };
 
     RVK_CHECK(vkCreateShaderModule(*device, &mod_info, null, &shader));
 }
@@ -130,12 +131,13 @@ Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {
 
         for(auto& set : info.descriptor_set_layouts) layouts.push(VkDescriptorSetLayout{*set});
 
-        VkPipelineLayoutCreateInfo layout_info = {};
-        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_info.setLayoutCount = static_cast<u32>(layouts.length());
-        layout_info.pSetLayouts = layouts.data();
-        layout_info.pushConstantRangeCount = static_cast<u32>(info.push_constants.length());
-        layout_info.pPushConstantRanges = info.push_constants.data();
+        VkPipelineLayoutCreateInfo layout_info = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = static_cast<u32>(layouts.length()),
+            .pSetLayouts = layouts.data(),
+            .pushConstantRangeCount = static_cast<u32>(info.push_constants.length()),
+            .pPushConstantRanges = info.push_constants.data(),
+        };
 
         RVK_CHECK(vkCreatePipelineLayout(*device, &layout_info, null, &layout));
 
