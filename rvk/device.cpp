@@ -293,6 +293,10 @@ void Physical_Device::get_present_modes(VkSurfaceKHR surface, Slice<VkPresentMod
         device, surface, &n, const_cast<VkPresentModeKHR*>(modes.data())));
 }
 
+u64 Physical_Device::max_allocation() {
+    return properties_.maintenance3.maxMemoryAllocationSize;
+}
+
 u64 Physical_Device::heap_size(u32 heap) {
     u32 heap_idx = properties_.memory.memoryProperties.memoryTypes[heap].heapIndex;
     return properties_.memory.memoryProperties.memoryHeaps[heap_idx].size;

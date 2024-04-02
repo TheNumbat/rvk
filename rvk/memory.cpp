@@ -101,13 +101,11 @@ Opt<Image> Device_Memory::make(VkExtent3D extent, VkFormat format, VkImageUsageF
 
     VkImageMemoryRequirementsInfo2 image_requirements = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
-        .pNext = null,
         .image = image,
     };
 
     VkMemoryRequirements2 memory_requirements = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
-        .pNext = null,
     };
 
     vkGetImageMemoryRequirements2(*device, &image_requirements, &memory_requirements);
@@ -153,12 +151,20 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
 
     RVK_CHECK(vkCreateBuffer(*device, &info, null, &buffer));
 
-    VkMemoryRequirements memory_requirements = {};
-    vkGetBufferMemoryRequirements(*device, buffer, &memory_requirements);
+    VkBufferMemoryRequirementsInfo2 buffer_requirements = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+        .buffer = buffer,
+    };
 
-    auto address =
-        allocator.allocate(memory_requirements.size,
-                           Math::max(memory_requirements.alignment, buffer_image_granularity));
+    VkMemoryRequirements2 memory_requirements = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+    };
+
+    vkGetBufferMemoryRequirements2(*device, &buffer_requirements, &memory_requirements);
+
+    auto address = allocator.allocate(
+        memory_requirements.memoryRequirements.size,
+        Math::max(memory_requirements.memoryRequirements.alignment, buffer_image_granularity));
     if(!address.ok()) {
         vkDestroyBuffer(*device, buffer, null);
         return {};
@@ -187,6 +193,8 @@ Image::~Image() {
     }
     image = null;
     address = null;
+    extent_ = {};
+    format_ = VK_FORMAT_UNDEFINED;
 }
 
 Image::Image(Image&& src) {

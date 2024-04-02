@@ -97,7 +97,7 @@ struct Vk {
     Arc<Physical_Device, Alloc> physical_device;
     Arc<Device, Alloc> device;
     Arc<Device_Memory, Alloc> host_memory;
-    Arc<Device_Memory, Alloc> device_memory;
+    Vec<Arc<Device_Memory, Alloc>, Alloc> device_memories;
     Arc<Swapchain, Alloc> swapchain;
     Arc<Descriptor_Pool, Alloc> descriptor_pool;
     Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc> graphics_command_pool;
@@ -165,9 +165,16 @@ Vk::Vk(Config config) {
     host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
                                                   config.host_heap);
 
-    device_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::device,
-                                                    device->heap_size(Heap::device) -
-                                                        config.device_heap_margin);
+    {
+        u64 allocated = 0;
+        u64 target = device->heap_size(Heap::device) - config.device_heap_margin;
+        while(allocated < target) {
+            u64 size = Math::min(target - allocated, physical_device->max_allocation());
+            device_memories.push(
+                Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::device, size));
+            allocated += size;
+        }
+    }
 
     descriptor_pool = Arc<Descriptor_Pool, Alloc>::make(device.dup(), config.descriptors_per_type,
                                                         config.ray_tracing);
@@ -219,8 +226,8 @@ void Vk::imgui() {
     Text("Swapchain images: %u | Max frames: %u", swapchain->slot_count(), state.frames_in_flight);
     Text("Extent: %ux%u", swapchain->extent().width, swapchain->extent().height);
 
-    if(TreeNodeEx("Device Heap", ImGuiTreeNodeFlags_DefaultOpen)) {
-        device_memory->imgui();
+    if(TreeNodeEx("Device Heaps", ImGuiTreeNodeFlags_DefaultOpen)) {
+        for(auto& device_memory : device_memories) device_memory->imgui();
         TreePop();
     }
     if(TreeNodeEx("Host Heap", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -438,11 +445,21 @@ Semaphore Vk::make_semaphore() {
 }
 
 Opt<TLAS::Staged> Vk::make_tlas(Buffer instances, u32 n_instances) {
-    return TLAS::make(device_memory.dup(), move(instances), n_instances);
+    for(auto& device_memory : device_memories) {
+        if(auto tlas = TLAS::make(device_memory.dup(), move(instances), n_instances); tlas.ok()) {
+            return tlas;
+        }
+    }
+    return {};
 }
 
 Opt<BLAS::Staged> Vk::make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
-    return BLAS::make(device_memory.dup(), move(geometry), move(offsets));
+    for(auto& device_memory : device_memories) {
+        if(auto blas = BLAS::make(device_memory.dup(), move(geometry), move(offsets)); blas.ok()) {
+            return blas;
+        }
+    }
+    return {};
 }
 
 Pipeline Vk::make_pipeline(Pipeline::Info info) {
@@ -557,11 +574,21 @@ Opt<Buffer> make_staging(u64 size) {
 }
 
 Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage) {
-    return impl::singleton->device_memory->make(size, usage);
+    for(auto& device_memory : impl::singleton->device_memories) {
+        if(auto buf = device_memory->make(size, usage); buf.ok()) {
+            return buf;
+        }
+    }
+    return {};
 }
 
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage) {
-    return impl::singleton->device_memory->make(extent, format, usage);
+    for(auto& device_memory : impl::singleton->device_memories) {
+        if(auto img = device_memory->make(extent, format, usage); img.ok()) {
+            return img;
+        }
+    }
+    return {};
 }
 
 Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances) {
