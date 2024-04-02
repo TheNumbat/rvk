@@ -15,19 +15,19 @@ using namespace rpp;
 
 Fence::Fence(Arc<Device, Alloc> D) : device(move(D)) {
 
-    VkFenceCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
-
     VkExportFenceCreateInfo export_info = {
         .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
-        .pNext = &export_info,
 #ifdef RPP_OS_WINDOWS
         .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT,
 #else
         .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT,
 #endif
+    };
+
+    VkFenceCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = &export_info,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
 
     RVK_CHECK(vkCreateFence(*device, &info, null, &fence));
