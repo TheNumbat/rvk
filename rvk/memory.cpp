@@ -152,7 +152,7 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
     RVK_CHECK(vkCreateBuffer(*device, &info, null, &buffer));
 
     VkBufferMemoryRequirementsInfo2 buffer_requirements = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
         .buffer = buffer,
     };
 

@@ -137,11 +137,18 @@ struct Vk {
 
     Fence make_fence();
     Semaphore make_semaphore();
-    Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances);
-    Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
+
     Pipeline make_pipeline(Pipeline::Info info);
     Opt<Binding_Table> make_table(Commands& cmds, Pipeline& pipeline,
                                   Binding_Table::Mapping mapping);
+
+    Opt<TLAS::Buffers> make_tlas(u32 instances);
+    Opt<BLAS::Buffers> make_blas(Slice<BLAS::Size> sizes);
+
+    TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
+                    Slice<TLAS::Instance> cpu_instances);
+    BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry,
+                    Slice<BLAS::Offset> offsets);
 };
 
 static Opt<Vk> singleton;
@@ -444,22 +451,32 @@ Semaphore Vk::make_semaphore() {
     return Semaphore{device.dup()};
 }
 
-Opt<TLAS::Staged> Vk::make_tlas(Buffer instances, u32 n_instances) {
+Opt<TLAS::Buffers> Vk::make_tlas(u32 instances) {
     for(auto& device_memory : device_memories) {
-        if(auto tlas = TLAS::make(device_memory.dup(), move(instances), n_instances); tlas.ok()) {
+        if(auto tlas = TLAS::make(device_memory, instances); tlas.ok()) {
             return tlas;
         }
     }
     return {};
 }
 
-Opt<BLAS::Staged> Vk::make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
+Opt<BLAS::Buffers> Vk::make_blas(Slice<BLAS::Size> sizes) {
     for(auto& device_memory : device_memories) {
-        if(auto blas = BLAS::make(device_memory.dup(), move(geometry), move(offsets)); blas.ok()) {
+        if(auto blas = BLAS::make(device_memory, sizes); blas.ok()) {
             return blas;
         }
     }
     return {};
+}
+
+TLAS Vk::build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
+                    Slice<TLAS::Instance> cpu_instances) {
+    return TLAS::build(device.dup(), cmds, move(tlas), move(gpu_instances), cpu_instances);
+}
+
+BLAS Vk::build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry,
+                    Slice<BLAS::Offset> offsets) {
+    return BLAS::build(device.dup(), cmds, move(blas), move(geometry), offsets);
 }
 
 Pipeline Vk::make_pipeline(Pipeline::Info info) {
@@ -591,12 +608,21 @@ Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usag
     return {};
 }
 
-Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances) {
-    return impl::singleton->make_tlas(move(instances), n_instances);
+Opt<TLAS::Buffers> make_tlas(u32 instances) {
+    return impl::singleton->make_tlas(instances);
 }
 
-Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets) {
-    return impl::singleton->make_blas(move(geometry), move(offsets));
+Opt<BLAS::Buffers> make_blas(Slice<BLAS::Size> sizes) {
+    return impl::singleton->make_blas(sizes);
+}
+
+TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
+                Slice<TLAS::Instance> cpu_instances) {
+    return impl::singleton->build_tlas(cmds, move(tlas), move(gpu_instances), cpu_instances);
+}
+
+BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry, Slice<BLAS::Offset> offsets) {
+    return impl::singleton->build_blas(cmds, move(blas), move(geometry), offsets);
 }
 
 void submit(Commands& cmds, u32 index) {
