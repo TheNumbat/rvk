@@ -47,9 +47,10 @@ private:
 };
 
 struct Frame {
-    explicit Frame(Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& graphics_command_pool)
-        : fence{make_fence()}, cmds{graphics_command_pool->make()}, available{make_semaphore()},
-          complete{make_semaphore()} {
+    explicit Frame(Arc<Command_Pool_Manager<Queue_Family::graphics>, Alloc>& graphics_command_pool,
+                   Fence fence, Semaphore available, Semaphore complete)
+        : fence{move(fence)}, cmds{graphics_command_pool->make()}, available{move(available)},
+          complete{move(complete)} {
     }
     ~Frame() = default;
 
@@ -200,7 +201,7 @@ Vk::Vk(Config config) {
 
         frames.reserve(config.frames_in_flight);
         for(u32 i = 0; i < config.frames_in_flight; i++) {
-            frames.emplace(graphics_command_pool);
+            frames.emplace(graphics_command_pool, make_fence(), make_semaphore(), make_semaphore());
             deletion_queues.emplace();
         }
 
@@ -209,10 +210,15 @@ Vk::Vk(Config config) {
              Profile::ms(end - start));
     }
 
-    sync([&](Commands& cmds) {
+    { // Can't use sync() yet because we haven't finished creating the Vk singleton
+        auto fence = make_fence();
+        auto cmds = graphics_command_pool->make();
         swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
                                                 instance->surface(), config.frames_in_flight);
-    });
+        cmds.end();
+        device->submit(cmds, 0, fence);
+        fence.wait();
+    }
 
     compositor = Arc<Compositor, Alloc>::make(device.dup(), swapchain.dup(), descriptor_pool);
 
