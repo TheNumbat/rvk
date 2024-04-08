@@ -41,6 +41,7 @@ struct Physical_Device {
     Opt<u32> queue_index(Queue_Family family);
     Opt<u32> present_queue_index(VkSurfaceKHR surface);
 
+    u64 max_allocation();
     u64 heap_size(u32 heap);
     Pair<u64, u64> heap_stat(u32 heap);
     Opt<u32> heap_index(u32 mask, u32 properties);

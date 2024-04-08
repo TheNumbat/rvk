@@ -72,8 +72,13 @@ Commands make_commands(Queue_Family family = Queue_Family::graphics);
 Opt<Buffer> make_staging(u64 size);
 Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage);
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
-Opt<TLAS::Staged> make_tlas(Buffer instances, u32 n_instances);
-Opt<BLAS::Staged> make_blas(Buffer geometry, Vec<BLAS::Offsets, Alloc> offsets);
+
+Opt<TLAS::Buffers> make_tlas(u32 instances);
+Opt<BLAS::Buffers> make_blas(Slice<BLAS::Size> sizes);
+
+TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
+                Slice<TLAS::Instance> cpu_instances);
+BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry, Slice<BLAS::Offset> offsets);
 
 // Pipelines
 

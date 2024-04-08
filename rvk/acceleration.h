@@ -16,31 +16,10 @@ struct TLAS {
 
     using Instance = VkAccelerationStructureInstanceKHR;
 
-    struct Staged {
-        Staged() = default;
-        ~Staged() = default;
-
-        Staged(const Staged& src) = delete;
-        Staged& operator=(const Staged& src) = delete;
-
-        Staged(Staged&& src) = default;
-        Staged& operator=(Staged&& src) = default;
-
-    private:
-        explicit Staged(Buffer result, Buffer scratch, Buffer instances, u32 n_instances,
-                        u64 result_size, Arc<Device_Memory, Alloc> memory)
-            : result(move(result)), scratch(move(scratch)), instances(move(instances)),
-              n_instances(n_instances), result_size(result_size), memory(move(memory)) {
-        }
-
-        Buffer result;
+    struct Buffers {
+        Buffer structure;
         Buffer scratch;
-        Buffer instances;
-        u32 n_instances = 0;
-        u64 result_size = 0;
-        Arc<Device_Memory, Alloc> memory;
-
-        friend struct TLAS;
+        u64 size = 0;
     };
 
     TLAS() = default;
@@ -52,60 +31,44 @@ struct TLAS {
     TLAS(TLAS&& src);
     TLAS& operator=(TLAS&& src);
 
-    static TLAS build(Commands& cmds, Staged gpu_data);
-
     operator VkAccelerationStructureKHR() {
-        return acceleration_structure;
+        return structure;
     }
 
 private:
-    explicit TLAS(Arc<Device_Memory, Alloc> memory, Buffer structure,
-                  VkAccelerationStructureKHR accel);
+    explicit TLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR structure, Buffer buffer);
     friend struct Vk;
 
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer instances, u32 n_instances);
+    static Opt<Buffers> make(Arc<Device_Memory, Alloc>& memory, u32 instances);
+    static TLAS build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers,
+                      Buffer gpu_instances, Slice<Instance> cpu_instances);
 
-    Arc<Device_Memory, Alloc> memory;
+    Arc<Device, Alloc> device;
 
-    Buffer structure_buf;
-    VkAccelerationStructureKHR acceleration_structure = null;
+    Buffer buffer;
+    VkAccelerationStructureKHR structure = null;
 };
 
 struct BLAS {
 
-    struct Offsets {
-        u64 vertex = 0;
-        u64 index = 0;
+    struct Size {
         u64 n_vertices = 0;
         u64 n_indices = 0;
-        Opt<u64> transform;
+        bool transform = false;
     };
 
-    struct Staged {
-        Staged() = default;
-        ~Staged() = default;
-
-        Staged(const Staged& src) = delete;
-        Staged& operator=(const Staged& src) = delete;
-
-        Staged(Staged&& src) = default;
-        Staged& operator=(Staged&& src) = default;
-
-    private:
-        explicit Staged(Buffer result, Buffer scratch, Buffer geometry, u64 result_size,
-                        Vec<Offsets, Alloc> offsets, Arc<Device_Memory, Alloc> memory)
-            : result(move(result)), scratch(move(scratch)), geometry(move(geometry)),
-              result_size(result_size), offsets(move(offsets)), memory(move(memory)) {
-        }
-
-        Buffer result;
+    struct Buffers {
+        Buffer structure;
         Buffer scratch;
-        Buffer geometry;
-        u64 result_size = 0;
-        Vec<Offsets, Alloc> offsets;
-        Arc<Device_Memory, Alloc> memory;
+        u64 size = 0;
+    };
 
-        friend struct BLAS;
+    struct Offset {
+        u64 vertex = 0;
+        u64 index = 0;
+        Opt<u64> transform;
+        u64 n_vertices = 0;
+        u64 n_indices = 0;
     };
 
     BLAS() = default;
@@ -116,26 +79,25 @@ struct BLAS {
     BLAS(BLAS&& src);
     BLAS& operator=(BLAS&& src);
 
-    static BLAS build(Commands& cmds, Staged buffers);
-
     u64 gpu_address();
 
     operator VkAccelerationStructureKHR() {
-        return acceleration_structure;
+        return structure;
     }
 
 private:
-    explicit BLAS(Arc<Device_Memory, Alloc> memory, Buffer structure,
-                  VkAccelerationStructureKHR accel);
+    explicit BLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR structure,
+                  Buffer buffer);
     friend struct Vk;
 
-    static Opt<Staged> make(Arc<Device_Memory, Alloc> memory, Buffer geometry,
-                            Vec<Offsets, Alloc> offsets);
+    static Opt<Buffers> make(Arc<Device_Memory, Alloc>& memory, Slice<Size> sizes);
+    static BLAS build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers, Buffer geometry,
+                      Slice<Offset> offsets);
 
-    Arc<Device_Memory, Alloc> memory;
+    Arc<Device, Alloc> device;
 
-    Buffer structure_buf;
-    VkAccelerationStructureKHR acceleration_structure = null;
+    Buffer buffer;
+    VkAccelerationStructureKHR structure = null;
 };
 
 } // namespace rvk::impl

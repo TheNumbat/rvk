@@ -293,21 +293,18 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
         .primitiveRestartEnable = VK_FALSE,
     };
 
-    VkExtent2D extent = swapchain->extent();
-
     static VkViewport viewport = {
         .x = 0.0f,
         .y = 0.0f,
-        .width = static_cast<f32>(extent.width),
-        .height = static_cast<f32>(extent.height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f,
     };
+    static VkRect2D scissor = {};
 
-    static VkRect2D scissor = {
-        .offset = {0, 0},
-        .extent = extent,
-    };
+    VkExtent2D extent = swapchain->extent();
+    viewport.width = static_cast<f32>(extent.width);
+    viewport.height = static_cast<f32>(extent.height);
+    scissor.extent = extent;
 
     static VkPipelineViewportStateCreateInfo view_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
