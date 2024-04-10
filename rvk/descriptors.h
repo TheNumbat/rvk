@@ -26,8 +26,8 @@ struct Descriptor_Set_Layout {
 
 private:
     explicit Descriptor_Set_Layout(Arc<Device, Alloc> device,
-                                   Slice<VkDescriptorSetLayoutBinding> bindings,
-                                   Slice<VkDescriptorBindingFlags> flags);
+                                   Slice<const VkDescriptorSetLayoutBinding> bindings,
+                                   Slice<const VkDescriptorBindingFlags> flags);
     friend struct Vk;
 
     Arc<Device, Alloc> device;
@@ -48,7 +48,7 @@ struct Descriptor_Set {
     Descriptor_Set(Descriptor_Set&& src) = default;
     Descriptor_Set& operator=(Descriptor_Set&& src) = default;
 
-    void write(u64 frame_index, Slice<VkWriteDescriptorSet> writes);
+    void write(u64 frame_index, Slice<const VkWriteDescriptorSet> writes);
 
     VkDescriptorSet get(u64 frame_index) {
         return sets[frame_index];

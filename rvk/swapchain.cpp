@@ -14,7 +14,7 @@ static Shader compositor_v(Arc<Device, Alloc> device);
 static Shader compositor_f(Arc<Device, Alloc> device);
 static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
                                                Descriptor_Set_Layout& layout, Shader& v, Shader& f);
-static Slice<VkDescriptorSetLayoutBinding> compositor_ds_layout();
+static Slice<const VkDescriptorSetLayoutBinding> compositor_ds_layout();
 
 static void swapchain_image_setup(Commands& commands, VkImage image);
 static VkImageView swapchain_image_view(VkDevice device, VkImage image, VkFormat format);
@@ -131,7 +131,7 @@ Swapchain::~Swapchain() {
     swapchain = null;
 }
 
-VkSurfaceFormatKHR Swapchain::choose_format(Slice<VkSurfaceFormatKHR> formats) {
+VkSurfaceFormatKHR Swapchain::choose_format(Slice<const VkSurfaceFormatKHR> formats) {
 
     VkSurfaceFormatKHR result;
 
@@ -158,7 +158,7 @@ VkSurfaceFormatKHR Swapchain::choose_format(Slice<VkSurfaceFormatKHR> formats) {
     return formats[0];
 }
 
-VkPresentModeKHR Swapchain::choose_present_mode(Slice<VkPresentModeKHR> modes) {
+VkPresentModeKHR Swapchain::choose_present_mode(Slice<const VkPresentModeKHR> modes) {
     assert(modes.length() < UINT32_MAX);
 
     for(u32 i = 0; i < modes.length(); i++) {
@@ -192,7 +192,8 @@ VkExtent2D Swapchain::choose_extent(VkSurfaceCapabilitiesKHR capabilities) {
 Compositor::Compositor(Arc<Device, Alloc> D, Arc<Swapchain, Alloc> S,
                        Arc<Descriptor_Pool, Alloc>& pool)
     : device(move(D)), swapchain(move(S)), v(compositor_v(device.dup())),
-      f(compositor_f(device.dup())), ds_layout(device.dup(), compositor_ds_layout(), Slice<u32>{}),
+      f(compositor_f(device.dup())),
+      ds_layout(device.dup(), compositor_ds_layout(), Slice<const u32>{}),
       ds(pool->make(ds_layout, swapchain->frame_count(), 0)),
       sampler(device.dup(), VK_FILTER_NEAREST, VK_FILTER_NEAREST),
       pipeline(Pipeline{device.dup(), compositor_pipeline_info(swapchain, ds_layout, v, f)}) {
@@ -255,14 +256,13 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
     vkCmdEndRendering(cmds);
 }
 
-static Slice<VkDescriptorSetLayoutBinding> compositor_ds_layout() {
-    static const VkDescriptorSetLayoutBinding binding{
+static Slice<const VkDescriptorSetLayoutBinding> compositor_ds_layout() {
+    return Slice{VkDescriptorSetLayoutBinding{
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-    };
-    return Slice{&binding, 1};
+    }};
 }
 
 static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,

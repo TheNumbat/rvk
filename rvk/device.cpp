@@ -283,14 +283,12 @@ u32 Physical_Device::n_present_modes(VkSurfaceKHR surface) {
 
 void Physical_Device::get_surface_formats(VkSurfaceKHR surface, Slice<VkSurfaceFormatKHR> formats) {
     u32 n = static_cast<u32>(formats.length());
-    RVK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
-        device, surface, &n, const_cast<VkSurfaceFormatKHR*>(formats.data())));
+    RVK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &n, formats.data()));
 }
 
 void Physical_Device::get_present_modes(VkSurfaceKHR surface, Slice<VkPresentModeKHR> modes) {
     u32 n = static_cast<u32>(modes.length());
-    RVK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
-        device, surface, &n, const_cast<VkPresentModeKHR*>(modes.data())));
+    RVK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &n, modes.data()));
 }
 
 u64 Physical_Device::max_allocation() {
@@ -686,7 +684,8 @@ void Device::submit(Commands& cmds, u32 index, Fence& fence) {
     }
 }
 
-void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait) {
+void Device::submit(Commands& cmds, u32 index, Slice<const Sem_Ref> signal,
+                    Slice<const Sem_Ref> wait) {
 
     Region(R) {
 
@@ -732,8 +731,8 @@ void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_
     }
 }
 
-void Device::submit(Commands& cmds, u32 index, Slice<Sem_Ref> signal, Slice<Sem_Ref> wait,
-                    Fence& fence) {
+void Device::submit(Commands& cmds, u32 index, Slice<const Sem_Ref> signal,
+                    Slice<const Sem_Ref> wait, Fence& fence) {
 
     Region(R) {
 
@@ -814,7 +813,7 @@ Slice<const char*> Device::baseline_extensions() {
         reinterpret_cast<const char*>(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME),
 #endif
     };
-    return Slice<const char*>{device};
+    return device.slice();
 }
 
 Slice<const char*> Device::ray_tracing_extensions() {
@@ -826,7 +825,7 @@ Slice<const char*> Device::ray_tracing_extensions() {
         reinterpret_cast<const char*>(VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME),
         reinterpret_cast<const char*>(VK_KHR_RAY_QUERY_EXTENSION_NAME),
     };
-    return Slice<const char*>{device};
+    return device.slice();
 }
 
 } // namespace rvk::impl

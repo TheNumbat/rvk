@@ -106,7 +106,7 @@ Descriptor_Set::~Descriptor_Set() {
     }
 }
 
-void Descriptor_Set::write(u64 frame_index, Slice<VkWriteDescriptorSet> writes) {
+void Descriptor_Set::write(u64 frame_index, Slice<const VkWriteDescriptorSet> writes) {
     assert(frame_index < sets.length());
 
     Region(R) {
@@ -121,8 +121,8 @@ void Descriptor_Set::write(u64 frame_index, Slice<VkWriteDescriptorSet> writes) 
 }
 
 Descriptor_Set_Layout::Descriptor_Set_Layout(Arc<Device, Alloc> D,
-                                             Slice<VkDescriptorSetLayoutBinding> bindings,
-                                             Slice<VkDescriptorBindingFlags> flags)
+                                             Slice<const VkDescriptorSetLayoutBinding> bindings,
+                                             Slice<const VkDescriptorBindingFlags> flags)
     : device(move(D)) {
 
     assert(bindings.length() == flags.length() || flags.length() == 0);

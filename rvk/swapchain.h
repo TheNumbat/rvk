@@ -75,8 +75,8 @@ struct Swapchain {
     static VkExtent2D choose_extent(VkSurfaceCapabilitiesKHR capabilities);
 
 private:
-    static VkSurfaceFormatKHR choose_format(Slice<VkSurfaceFormatKHR> formats);
-    static VkPresentModeKHR choose_present_mode(Slice<VkPresentModeKHR> modes);
+    static VkSurfaceFormatKHR choose_format(Slice<const VkSurfaceFormatKHR> formats);
+    static VkPresentModeKHR choose_present_mode(Slice<const VkPresentModeKHR> modes);
 
     Arc<Device, Alloc> device;
 

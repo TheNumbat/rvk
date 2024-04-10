@@ -144,12 +144,12 @@ struct Vk {
                                   Binding_Table::Mapping mapping);
 
     Opt<TLAS::Buffers> make_tlas(u32 instances);
-    Opt<BLAS::Buffers> make_blas(Slice<BLAS::Size> sizes);
+    Opt<BLAS::Buffers> make_blas(Slice<const BLAS::Size> sizes);
 
     TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
-                    Slice<TLAS::Instance> cpu_instances);
+                    Slice<const TLAS::Instance> cpu_instances);
     BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry,
-                    Slice<BLAS::Offset> offsets);
+                    Slice<const BLAS::Offset> offsets);
 };
 
 static Opt<Vk> singleton;
@@ -466,7 +466,7 @@ Opt<TLAS::Buffers> Vk::make_tlas(u32 instances) {
     return {};
 }
 
-Opt<BLAS::Buffers> Vk::make_blas(Slice<BLAS::Size> sizes) {
+Opt<BLAS::Buffers> Vk::make_blas(Slice<const BLAS::Size> sizes) {
     for(auto& device_memory : device_memories) {
         if(auto blas = BLAS::make(device_memory, sizes); blas.ok()) {
             return blas;
@@ -476,12 +476,12 @@ Opt<BLAS::Buffers> Vk::make_blas(Slice<BLAS::Size> sizes) {
 }
 
 TLAS Vk::build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
-                    Slice<TLAS::Instance> cpu_instances) {
+                    Slice<const TLAS::Instance> cpu_instances) {
     return TLAS::build(device.dup(), cmds, move(tlas), move(gpu_instances), cpu_instances);
 }
 
 BLAS Vk::build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry,
-                    Slice<BLAS::Offset> offsets) {
+                    Slice<const BLAS::Offset> offsets) {
     return BLAS::build(device.dup(), cmds, move(blas), move(geometry), offsets);
 }
 
@@ -618,12 +618,12 @@ Opt<TLAS::Buffers> make_tlas(u32 instances) {
     return impl::singleton->make_tlas(instances);
 }
 
-Opt<BLAS::Buffers> make_blas(Slice<BLAS::Size> sizes) {
+Opt<BLAS::Buffers> make_blas(Slice<const BLAS::Size> sizes) {
     return impl::singleton->make_blas(sizes);
 }
 
 TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
-                Slice<TLAS::Instance> cpu_instances) {
+                Slice<const TLAS::Instance> cpu_instances) {
     return impl::singleton->build_tlas(cmds, move(tlas), move(gpu_instances), cpu_instances);
 }
 
@@ -639,11 +639,12 @@ void submit(Commands& cmds, u32 index, Fence& fence) {
     impl::singleton->device->submit(cmds, index, fence);
 }
 
-void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal) {
+void submit(Commands& cmds, u32 index, Slice<const Sem_Ref> wait, Slice<const Sem_Ref> signal) {
     impl::singleton->device->submit(cmds, index, wait, signal);
 }
 
-void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal, Fence& fence) {
+void submit(Commands& cmds, u32 index, Slice<const Sem_Ref> wait, Slice<const Sem_Ref> signal,
+            Fence& fence) {
     impl::singleton->device->submit(cmds, index, wait, signal, fence);
 }
 

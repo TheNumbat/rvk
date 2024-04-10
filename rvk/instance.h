@@ -50,7 +50,7 @@ struct Instance {
     static Slice<const char*> baseline_extensions();
 
 private:
-    explicit Instance(Slice<String_View> extensions, Slice<String_View> layers,
+    explicit Instance(Slice<const String_View> extensions, Slice<const String_View> layers,
                       Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation);
     friend struct Arc<Instance, Alloc>;
 

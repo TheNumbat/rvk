@@ -32,8 +32,8 @@ struct Config {
     u32 frames_in_flight = 2;
     u32 descriptors_per_type = 128;
 
-    Slice<String_View> layers;
-    Slice<String_View> swapchain_extensions;
+    Slice<const String_View> layers;
+    Slice<const String_View> swapchain_extensions;
     Function<VkSurfaceKHR(VkInstance)> create_surface;
 
     u64 host_heap = Math::GB(1);
@@ -74,17 +74,18 @@ Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage);
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
 Opt<TLAS::Buffers> make_tlas(u32 instances);
-Opt<BLAS::Buffers> make_blas(Slice<BLAS::Size> sizes);
+Opt<BLAS::Buffers> make_blas(Slice<const BLAS::Size> sizes);
 
 TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
-                Slice<TLAS::Instance> cpu_instances);
-BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry, Slice<BLAS::Offset> offsets);
+                Slice<const TLAS::Instance> cpu_instances);
+BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry,
+                Slice<const BLAS::Offset> offsets);
 
 // Pipelines
 
 template<Type_List L>
     requires(Reflect::All<Is_Binding, L>)
-Descriptor_Set_Layout make_layout(Slice<u32> counts = Slice<u32>{});
+Descriptor_Set_Layout make_layout(Slice<const u32> counts = Slice<const u32>{});
 
 Descriptor_Set make_set(Descriptor_Set_Layout& layout, u32 variable_count = 0);
 
@@ -106,8 +107,9 @@ Opt<Binding_Table> make_table(Commands& cmds, Pipeline& pipeline, Binding_Table:
 
 void submit(Commands& cmds, u32 index);
 void submit(Commands& cmds, u32 index, Fence& fence);
-void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal);
-void submit(Commands& cmds, u32 index, Slice<Sem_Ref> wait, Slice<Sem_Ref> signal, Fence& fence);
+void submit(Commands& cmds, u32 index, Slice<const Sem_Ref> wait, Slice<const Sem_Ref> signal);
+void submit(Commands& cmds, u32 index, Slice<const Sem_Ref> wait, Slice<const Sem_Ref> signal,
+            Fence& fence);
 
 template<typename F>
     requires Invocable<F, Commands&>

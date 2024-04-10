@@ -19,7 +19,7 @@ static VkPipelineBindPoint bind_point(Pipeline::Kind kind) {
     }
 }
 
-Shader::Shader(Arc<Device, Alloc> D, Slice<u8> source) : device(move(D)) {
+Shader::Shader(Arc<Device, Alloc> D, Slice<const u8> source) : device(move(D)) {
 
     VkShaderModuleCreateInfo mod_info = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,

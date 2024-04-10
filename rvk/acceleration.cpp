@@ -82,7 +82,7 @@ Opt<TLAS::Buffers> TLAS::make(Arc<Device_Memory, Alloc>& memory, u32 instances) 
 }
 
 TLAS TLAS::build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers, Buffer gpu_instances,
-                 Slice<Instance> cpu_instances) {
+                 Slice<const Instance> cpu_instances) {
 
     VkAccelerationStructureKHR acceleration_structure = null;
 
@@ -168,7 +168,7 @@ u64 BLAS::gpu_address() {
     return vkGetAccelerationStructureDeviceAddressKHR(*device, &info);
 }
 
-Opt<BLAS::Buffers> BLAS::make(Arc<Device_Memory, Alloc>& memory, Slice<BLAS::Size> sizes) {
+Opt<BLAS::Buffers> BLAS::make(Arc<Device_Memory, Alloc>& memory, Slice<const BLAS::Size> sizes) {
 
     assert(sizes.length());
 
@@ -239,7 +239,7 @@ Opt<BLAS::Buffers> BLAS::make(Arc<Device_Memory, Alloc>& memory, Slice<BLAS::Siz
 }
 
 BLAS BLAS::build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers, Buffer geometry,
-                 Slice<Offset> offsets) {
+                 Slice<const Offset> offsets) {
 
     assert(offsets.length());
 

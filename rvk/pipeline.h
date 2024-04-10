@@ -25,7 +25,7 @@ using namespace rpp;
 
 struct Shader {
 
-    explicit Shader(Arc<Device, Alloc> device, Slice<u8> source);
+    explicit Shader(Arc<Device, Alloc> device, Slice<const u8> source);
 
     Shader() = default;
     ~Shader();
@@ -65,10 +65,10 @@ struct Binding_Table {
     };
 
     struct Mapping {
-        Slice<u32> gen;
-        Slice<u32> miss;
-        Slice<u32> hit;
-        Slice<u32> call;
+        Slice<const u32> gen;
+        Slice<const u32> miss;
+        Slice<const u32> hit;
+        Slice<const u32> call;
     };
 
     Binding_Table() = default;
@@ -120,8 +120,8 @@ struct Pipeline {
                                  VkRayTracingPipelineCreateInfoKHR>;
 
     struct Info {
-        Slice<VkPushConstantRange> push_constants;
-        Slice<Ref<Descriptor_Set_Layout>> descriptor_set_layouts;
+        Slice<const VkPushConstantRange> push_constants;
+        Slice<const Ref<Descriptor_Set_Layout>> descriptor_set_layouts;
         VkCreateInfo info;
     };
 

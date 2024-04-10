@@ -36,8 +36,8 @@ void crash_dump_callback(const void* dump, u32 dump_size, void*) {
     Region(R) {
         static u64 count = 0;
         auto filename = format<Mregion<R>>("gpu-dump-%.nv-gpudmp"_v, count++);
-        static_cast<void>(Files::write(
-            filename.view(), Slice<u8>{reinterpret_cast<u8*>(const_cast<void*>(dump)), dump_size}));
+        static_cast<void>(
+            Files::write(filename.view(), Slice{reinterpret_cast<const u8*>(dump), dump_size}));
     }
 }
 
@@ -46,9 +46,8 @@ void shader_debug_info_callback(const void* dump, u32 debug_info_size, void*) {
     Region(R) {
         static u64 count = 0;
         auto filename = format<Mregion<R>>("gpu-dump-%.nvdbg"_v, count++);
-        static_cast<void>(
-            Files::write(filename.view(), Slice<u8>{reinterpret_cast<u8*>(const_cast<void*>(dump)),
-                                                    debug_info_size}));
+        static_cast<void>(Files::write(filename.view(),
+                                       Slice{reinterpret_cast<const u8*>(dump), debug_info_size}));
     }
 }
 
@@ -120,10 +119,10 @@ Slice<const char*> Instance::baseline_extensions() {
     static Array<const char*, 1> instance{
         reinterpret_cast<const char*>(VK_EXT_DEBUG_UTILS_EXTENSION_NAME),
     };
-    return Slice<const char*>{instance};
+    return instance.slice();
 }
 
-Instance::Instance(Slice<String_View> extensions, Slice<String_View> layers,
+Instance::Instance(Slice<const String_View> extensions, Slice<const String_View> layers,
                    Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation) {
 
     Profile::Time_Point start = Profile::timestamp();

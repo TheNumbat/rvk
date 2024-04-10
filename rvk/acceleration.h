@@ -41,7 +41,7 @@ private:
 
     static Opt<Buffers> make(Arc<Device_Memory, Alloc>& memory, u32 instances);
     static TLAS build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers,
-                      Buffer gpu_instances, Slice<Instance> cpu_instances);
+                      Buffer gpu_instances, Slice<const Instance> cpu_instances);
 
     Arc<Device, Alloc> device;
 
@@ -86,13 +86,12 @@ struct BLAS {
     }
 
 private:
-    explicit BLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR structure,
-                  Buffer buffer);
+    explicit BLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR structure, Buffer buffer);
     friend struct Vk;
 
-    static Opt<Buffers> make(Arc<Device_Memory, Alloc>& memory, Slice<Size> sizes);
+    static Opt<Buffers> make(Arc<Device_Memory, Alloc>& memory, Slice<const Size> sizes);
     static BLAS build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers, Buffer geometry,
-                      Slice<Offset> offsets);
+                      Slice<const Offset> offsets);
 
     Arc<Device, Alloc> device;
 
