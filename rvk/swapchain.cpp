@@ -257,37 +257,38 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
 }
 
 static Slice<const VkDescriptorSetLayoutBinding> compositor_ds_layout() {
-    return Slice{VkDescriptorSetLayoutBinding{
+    static const VkDescriptorSetLayoutBinding binding{
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-    }};
+    };
+    return Slice{&binding, 1};
 }
 
 static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
                                                Descriptor_Set_Layout& layout, Shader& v,
                                                Shader& f) {
 
-    static Array<VkPipelineShaderStageCreateInfo, 2> stages;
-    stages[0] = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = v,
-        .pName = "main",
-    };
-    stages[1] = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = f,
-        .pName = "main",
-    };
+    static const auto stages =
+        Array{VkPipelineShaderStageCreateInfo{
+                  .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                  .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                  .module = v,
+                  .pName = "main",
+              },
+              VkPipelineShaderStageCreateInfo{
+                  .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                  .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                  .module = f,
+                  .pName = "main",
+              }};
 
-    static VkPipelineVertexInputStateCreateInfo v_in_info = {
+    static const VkPipelineVertexInputStateCreateInfo v_in_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     };
 
-    static VkPipelineInputAssemblyStateCreateInfo in_asm_info = {
+    static const VkPipelineInputAssemblyStateCreateInfo in_asm_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
         .primitiveRestartEnable = VK_FALSE,
@@ -306,7 +307,7 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
     viewport.height = static_cast<f32>(extent.height);
     scissor.extent = extent;
 
-    static VkPipelineViewportStateCreateInfo view_info = {
+    static const VkPipelineViewportStateCreateInfo view_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .viewportCount = 1,
         .pViewports = &viewport,
@@ -314,7 +315,7 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
         .pScissors = &scissor,
     };
 
-    static VkPipelineRasterizationStateCreateInfo raster_info = {
+    static const VkPipelineRasterizationStateCreateInfo raster_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .depthClampEnable = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
@@ -325,13 +326,13 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
         .lineWidth = 1.0f,
     };
 
-    static VkPipelineMultisampleStateCreateInfo msaa_info = {
+    static const VkPipelineMultisampleStateCreateInfo msaa_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
         .sampleShadingEnable = VK_FALSE,
     };
 
-    static VkPipelineColorBlendAttachmentState color_blend = {
+    static const VkPipelineColorBlendAttachmentState color_blend = {
         .blendEnable = VK_TRUE,
         .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
         .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -343,7 +344,7 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };
 
-    static VkPipelineColorBlendStateCreateInfo blend_info = {
+    static const VkPipelineColorBlendStateCreateInfo blend_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
         .logicOp = VK_LOGIC_OP_COPY,
@@ -354,7 +355,7 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
     static VkFormat format = {};
     format = swapchain->format();
 
-    static VkPipelineRenderingCreateInfo dynamic_info = {
+    static const VkPipelineRenderingCreateInfo dynamic_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
         .pColorAttachmentFormats = &format,
@@ -379,7 +380,7 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
     return Pipeline::Info{
         .push_constants = {},
         .descriptor_set_layouts = Slice{&layout_ref, 1},
-        .info = Pipeline::VkCreateInfo{move(pipeline_info)},
+        .info = move(pipeline_info),
     };
 }
 
