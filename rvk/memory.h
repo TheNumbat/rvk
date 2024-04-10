@@ -169,7 +169,7 @@ struct Buffer {
     u64 gpu_address() const;
 
     u8* map();
-    void write(Slice<u8> data, u64 offset = 0);
+    void write(Slice<const u8> data, u64 offset = 0);
 
     void move_from(Commands& commands, Buffer from);
     void copy_from(Commands& commands, Buffer& from);

@@ -124,11 +124,11 @@ struct Image_Sampled_Array {
         VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
 
     explicit Image_Sampled_Array() = default;
-    explicit Image_Sampled_Array(Slice<Image_Sampled<stages_>> images) {
+    explicit Image_Sampled_Array(Slice<const Image_Sampled<stages_>> images) {
         info = images;
     }
 
-    Slice<Image_Sampled<stages_>> info;
+    Slice<const Image_Sampled<stages_>> info;
 
     template<Region R>
     void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
@@ -286,7 +286,7 @@ struct Make {
     }
     Vec<VkDescriptorSetLayoutBinding, Mregion<R>>& bindings;
     Vec<VkDescriptorBindingFlags, Mregion<R>>& flags;
-    Slice<u32> counts;
+    Slice<const u32> counts;
 };
 
 template<Region R, Binding... Binds>
@@ -303,7 +303,7 @@ struct Write {
 struct Binder {
     template<Type_List L>
         requires(Reflect::All<rvk::Is_Binding, L>)
-    static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device, Slice<u32> counts) {
+    static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device, Slice<const u32> counts) {
         constexpr u64 N = Reflect::List_Length<L>;
         assert(counts.length() == N || counts.length() == 0);
         Region(R) {

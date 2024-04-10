@@ -627,7 +627,7 @@ TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
     return impl::singleton->build_tlas(cmds, move(tlas), move(gpu_instances), cpu_instances);
 }
 
-BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry, Slice<BLAS::Offset> offsets) {
+BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry, Slice<const BLAS::Offset> offsets) {
     return impl::singleton->build_blas(cmds, move(blas), move(geometry), offsets);
 }
 

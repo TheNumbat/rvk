@@ -431,7 +431,7 @@ u8* Buffer::map() {
     return null;
 }
 
-void Buffer::write(Slice<u8> data, u64 offset) {
+void Buffer::write(Slice<const u8> data, u64 offset) {
     assert(buffer);
     assert(data.length() + offset <= len);
 

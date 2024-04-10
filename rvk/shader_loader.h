@@ -31,7 +31,7 @@ struct Shader_Loader {
     Async::Task<Token> compile_async(Async::Pool<>& pool, String_View path);
 
     void try_reload();
-    void on_reload(Slice<Token> shaders, FunctionN<16, void(Shader_Loader&)> callback);
+    void on_reload(Slice<const Token> shaders, FunctionN<16, void(Shader_Loader&)> callback);
     void trigger(Token token);
 
 private:

@@ -86,7 +86,7 @@ void Shader_Loader::trigger(Token token) {
     callbacks.get(reloads.get(token))(*this);
 }
 
-void Shader_Loader::on_reload(Slice<Shader_Loader::Token> tokens,
+void Shader_Loader::on_reload(Slice<const Shader_Loader::Token> tokens,
                               FunctionN<16, void(Shader_Loader&)> callback) {
     assert(device.ok());
 
