@@ -38,7 +38,7 @@ struct Sampler {
     explicit Sampler() {
         info.sampler = null;
     }
-    explicit Sampler(Sampler& sampler) {
+    explicit Sampler(rvk::impl::Sampler& sampler) {
         info.sampler = sampler;
     }
 
@@ -120,8 +120,7 @@ template<VkShaderStageFlags stages_>
 struct Image_Sampled_Array {
     static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     static constexpr VkShaderStageFlags stages = stages_;
-    static constexpr VkDescriptorBindingFlags flags =
-        VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+    static constexpr VkDescriptorBindingFlags flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
 
     explicit Image_Sampled_Array() = default;
     explicit Image_Sampled_Array(Slice<const Image_Sampled<stages_>> images) {
@@ -136,7 +135,32 @@ struct Image_Sampled_Array {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .descriptorCount = static_cast<u32>(info.length()),
             .descriptorType = type,
-            .pImageInfo = reinterpret_cast<const VkDescriptorImageInfo*>(info.data()),
+            .pImageInfo = launder(reinterpret_cast<const VkDescriptorImageInfo*>(info.data())),
+        };
+        writes.push(write);
+    }
+};
+
+template<VkShaderStageFlags stages_>
+struct Sampler_Array {
+    static constexpr VkDescriptorType type = VK_DESCRIPTOR_TYPE_SAMPLER;
+    static constexpr VkShaderStageFlags stages = stages_;
+    static constexpr VkDescriptorBindingFlags flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+
+    explicit Sampler_Array() = default;
+    explicit Sampler_Array(Slice<const Sampler<stages_>> samplers) {
+        info = samplers;
+    }
+
+    Slice<const Sampler<stages_>> info;
+
+    template<Region R>
+    void write(Vec<VkWriteDescriptorSet, Mregion<R>>& writes) const {
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .descriptorCount = static_cast<u32>(info.length()),
+            .descriptorType = type,
+            .pImageInfo = launder(reinterpret_cast<const VkDescriptorImageInfo*>(info.data())),
         };
         writes.push(write);
     }
@@ -303,7 +327,8 @@ struct Write {
 struct Binder {
     template<Type_List L>
         requires(Reflect::All<rvk::Is_Binding, L>)
-    static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device, Slice<const u32> counts) {
+    static Descriptor_Set_Layout make(Arc<rvk::impl::Device, Alloc> device,
+                                      Slice<const u32> counts) {
         constexpr u64 N = Reflect::List_Length<L>;
         assert(counts.length() == N || counts.length() == 0);
         Region(R) {

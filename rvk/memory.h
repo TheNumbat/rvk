@@ -130,7 +130,20 @@ private:
 
 struct Sampler {
 
-    explicit Sampler(Arc<Device, Alloc> device, VkFilter min, VkFilter mag);
+    struct Config {
+        VkFilter min = VK_FILTER_LINEAR;
+        VkFilter mag = VK_FILTER_LINEAR;
+        VkSamplerMipmapMode mip = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        VkSamplerAddressMode u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        VkSamplerAddressMode v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        VkSamplerAddressMode w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+        constexpr bool operator==(const rvk::Sampler::Config& b) const {
+            return mag == b.mag && min == b.min && mip == b.mip && u == b.u && v == b.v && w == b.w;
+        }
+    };
+
+    explicit Sampler(Arc<Device, Alloc> device, Config config);
 
     Sampler() = default;
     ~Sampler();
@@ -193,3 +206,16 @@ private:
 };
 
 } // namespace rvk::impl
+
+namespace rpp::Hash {
+
+template<>
+struct Hash<rvk::Sampler::Config> {
+    static constexpr u64 hash(const rvk::Sampler::Config& config) noexcept {
+        return rpp::hash(static_cast<u32>(config.min), static_cast<u32>(config.mag),
+                         static_cast<u32>(config.mip), static_cast<u32>(config.u),
+                         static_cast<u32>(config.v), static_cast<u32>(config.w));
+    }
+};
+
+} // namespace rpp::Hash

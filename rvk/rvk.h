@@ -72,6 +72,7 @@ Commands make_commands(Queue_Family family = Queue_Family::graphics);
 Opt<Buffer> make_staging(u64 size);
 Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage);
 Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
+Sampler make_sampler(Sampler::Config config);
 
 Opt<TLAS::Buffers> make_tlas(u32 instances);
 Opt<BLAS::Buffers> make_blas(Slice<const BLAS::Size> sizes);

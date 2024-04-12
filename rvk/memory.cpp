@@ -346,16 +346,16 @@ Image_View& Image_View::operator=(Image_View&& src) {
     return *this;
 }
 
-Sampler::Sampler(Arc<Device, Alloc> D, VkFilter min, VkFilter mag) : device(move(D)) {
+Sampler::Sampler(Arc<Device, Alloc> D, Sampler::Config config) : device(move(D)) {
 
     VkSamplerCreateInfo sample_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = mag,
-        .minFilter = min,
-        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .magFilter = config.mag,
+        .minFilter = config.min,
+        .mipmapMode = config.mip,
+        .addressModeU = config.u,
+        .addressModeV = config.v,
+        .addressModeW = config.w,
         .minLod = 0.0f,
         .maxLod = VK_LOD_CLAMP_NONE,
     };

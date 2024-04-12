@@ -614,6 +614,10 @@ Opt<Image> make_image(VkExtent3D extent, VkFormat format, VkImageUsageFlags usag
     return {};
 }
 
+Sampler make_sampler(Sampler::Config config) {
+    return Sampler{impl::singleton->device.dup(), config};
+}
+
 Opt<TLAS::Buffers> make_tlas(u32 instances) {
     return impl::singleton->make_tlas(instances);
 }
@@ -627,7 +631,8 @@ TLAS build_tlas(Commands& cmds, TLAS::Buffers tlas, Buffer gpu_instances,
     return impl::singleton->build_tlas(cmds, move(tlas), move(gpu_instances), cpu_instances);
 }
 
-BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry, Slice<const BLAS::Offset> offsets) {
+BLAS build_blas(Commands& cmds, BLAS::Buffers blas, Buffer geometry,
+                Slice<const BLAS::Offset> offsets) {
     return impl::singleton->build_blas(cmds, move(blas), move(geometry), offsets);
 }
 

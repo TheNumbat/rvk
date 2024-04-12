@@ -195,7 +195,7 @@ Compositor::Compositor(Arc<Device, Alloc> D, Arc<Swapchain, Alloc> S,
       f(compositor_f(device.dup())),
       ds_layout(device.dup(), compositor_ds_layout(), Slice<const u32>{}),
       ds(pool->make(ds_layout, swapchain->frame_count(), 0)),
-      sampler(device.dup(), VK_FILTER_NEAREST, VK_FILTER_NEAREST),
+      sampler(device.dup(), {.min = VK_FILTER_NEAREST, .mag = VK_FILTER_NEAREST}),
       pipeline(Pipeline{device.dup(), compositor_pipeline_info(swapchain, ds_layout, v, f)}) {
     info("[rvk] Created compositor.");
 }
@@ -270,19 +270,19 @@ static Pipeline::Info compositor_pipeline_info(Arc<Swapchain, Alloc>& swapchain,
                                                Descriptor_Set_Layout& layout, Shader& v,
                                                Shader& f) {
 
-    static const auto stages =
-        Array{VkPipelineShaderStageCreateInfo{
-                  .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                  .stage = VK_SHADER_STAGE_VERTEX_BIT,
-                  .module = v,
-                  .pName = "main",
-              },
-              VkPipelineShaderStageCreateInfo{
-                  .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                  .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-                  .module = f,
-                  .pName = "main",
-              }};
+    static Array<VkPipelineShaderStageCreateInfo, 2> stages;
+    stages = Array{VkPipelineShaderStageCreateInfo{
+                       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                       .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                       .module = v,
+                       .pName = "main",
+                   },
+                   VkPipelineShaderStageCreateInfo{
+                       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                       .module = f,
+                       .pName = "main",
+                   }};
 
     static const VkPipelineVertexInputStateCreateInfo v_in_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,

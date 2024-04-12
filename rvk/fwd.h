@@ -85,6 +85,7 @@ using impl::Image;
 using impl::Image_View;
 using impl::Pipeline;
 using impl::Push;
+using impl::Sampler;
 using impl::Sem_Ref;
 using impl::Semaphore;
 using impl::Shader;
