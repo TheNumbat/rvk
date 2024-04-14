@@ -42,7 +42,7 @@ Opt<TLAS::Buffers> TLAS::make(Arc<Device_Memory, Alloc>& memory, u32 instances) 
             {.instances = {.sType =
                                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
                            .arrayOfPointers = VK_FALSE}},
-        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+        .flags = 0,
     };
 
     VkAccelerationStructureBuildGeometryInfoKHR build_info = {
@@ -106,7 +106,7 @@ TLAS TLAS::build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers, Buf
                                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
                            .arrayOfPointers = VK_FALSE,
                            .data = {.deviceAddress = gpu_instances.gpu_address()}}},
-        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+        .flags = 0,
     };
 
     VkAccelerationStructureBuildGeometryInfoKHR build_info = {
@@ -193,7 +193,7 @@ Opt<BLAS::Buffers> BLAS::make(Arc<Device_Memory, Alloc>& memory, Slice<const BLA
                              .indexType = VK_INDEX_TYPE_UINT32,
                              .transformData = {.deviceAddress = size.transform ? 1u : 0u},
                          }},
-                .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+                .flags = size.opaque ? VK_GEOMETRY_OPAQUE_BIT_KHR : VkGeometryFlagsKHR{},
             };
 
             geometries.push(geom);
@@ -278,7 +278,7 @@ BLAS BLAS::build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers, Buf
                           .transformData = {.deviceAddress = offset.transform.ok()
                                                                  ? base_data + *offset.transform
                                                                  : 0u}}},
-                .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+                .flags = offset.opaque ? VK_GEOMETRY_OPAQUE_BIT_KHR : VkGeometryFlagsKHR{},
             };
 
             geometries.push(geom);

@@ -55,6 +55,7 @@ struct BLAS {
         u64 n_vertices = 0;
         u64 n_indices = 0;
         bool transform = false;
+        bool opaque = true;
     };
 
     struct Buffers {
@@ -69,6 +70,7 @@ struct BLAS {
         Opt<u64> transform;
         u64 n_vertices = 0;
         u64 n_indices = 0;
+        bool opaque = true;
     };
 
     BLAS() = default;
