@@ -25,7 +25,8 @@ struct Compositor {
     Compositor(Compositor&&) = delete;
     Compositor& operator=(Compositor&&) = delete;
 
-    void render(Commands& cmds, u64 frame_index, u64 slot_index, bool has_imgui, Image_View& input);
+    void render(Commands& cmds, u64 frame_index, u64 slot_index, bool has_imgui, bool hdr,
+                Image_View& input);
 
 private:
     Arc<Device, Alloc> device;

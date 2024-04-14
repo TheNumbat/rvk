@@ -389,7 +389,7 @@ void Vk::end_frame(Image_View& output) {
         // Set up primary compositing command buffer
         frame.cmds.reset();
         compositor->render(frame.cmds, state.frame_index, state.swapchain_index, state.has_imgui,
-                           output);
+                           state.is_hdr, output);
         frame.cmds.end();
 
         // Wait for frame available before running the submit; signal frame complete on finish

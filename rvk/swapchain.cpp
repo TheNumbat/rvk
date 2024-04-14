@@ -230,7 +230,7 @@ Compositor::~Compositor() {
     info("[rvk] Destroyed compositor.");
 }
 
-void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool has_imgui,
+void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool has_imgui, bool hdr,
                         Image_View& input) {
 
     {
@@ -275,7 +275,7 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
         ImGui::Render();
         if(auto draw = ImGui::GetDrawData()) {
             device->lock_queues();
-            ImGui_ImplVulkan_RenderDrawData(draw, cmds);
+            ImGui_ImplVulkan_RenderDrawData(draw, cmds, hdr ? 5.0f : 1.0f);
             device->unlock_queues();
         }
     }
