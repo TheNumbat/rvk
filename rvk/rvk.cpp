@@ -114,6 +114,11 @@ struct Vk {
         bool has_validation = false;
         bool resized_last_frame = false;
         bool minimized = false;
+
+        bool has_hdr = false;
+        bool is_hdr = false;
+        bool was_hdr = false;
+
         u32 frames_in_flight = 0;
         u32 frame_index = 0;
         u32 swapchain_index = 0;
@@ -156,12 +161,14 @@ static Opt<Vk> singleton;
 
 Vk::Vk(Config config) {
 
+    state.has_hdr = config.hdr;
     state.has_imgui = config.imgui;
     state.frames_in_flight = config.frames_in_flight;
     state.has_validation = config.validation;
 
-    instance = Arc<Instance, Alloc>::make(move(config.swapchain_extensions), move(config.layers),
-                                          move(config.create_surface), config.validation);
+    instance =
+        Arc<Instance, Alloc>::make(move(config.swapchain_extensions), move(config.layers),
+                                   move(config.create_surface), config.validation, config.hdr);
 
     debug_callback = Arc<Debug_Callback, Alloc>::make(instance.dup());
 
@@ -213,8 +220,9 @@ Vk::Vk(Config config) {
     { // Can't use sync() yet because we haven't finished creating the Vk singleton
         auto fence = make_fence();
         auto cmds = graphics_command_pool->make();
-        swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
-                                                instance->surface(), config.frames_in_flight);
+        swapchain =
+            Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(), instance->surface(),
+                                        config.frames_in_flight, state.is_hdr);
         cmds.end();
         device->submit(cmds, 0, fence);
         fence.wait();
@@ -414,6 +422,13 @@ void Vk::end_frame(Image_View& output) {
         die("[rvk] Failed to present swapchain image: %", describe(result));
     }
 
+    // If HDR state changed, recreate swapchain
+    if(state.has_hdr && state.was_hdr != state.is_hdr) {
+        recreate_swapchain();
+        state.was_hdr = state.is_hdr;
+        return;
+    }
+
     // Circular increment of in-flight frame index
     state.advance();
 }
@@ -436,7 +451,8 @@ void Vk::recreate_swapchain() {
 
         sync([&](Commands& cmds) {
             swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
-                                                    instance->surface(), state.frames_in_flight);
+                                                    instance->surface(), state.frames_in_flight,
+                                                    state.is_hdr);
         });
         compositor = Arc<Compositor, Alloc>::make(device.dup(), swapchain.dup(), descriptor_pool);
 
@@ -534,8 +550,19 @@ void imgui() {
     impl::singleton->imgui();
 }
 
+void hdr(bool enable) {
+    if(impl::singleton->state.has_hdr) {
+        impl::singleton->state.was_hdr = impl::singleton->state.is_hdr;
+        impl::singleton->state.is_hdr = enable;
+    }
+}
+
 VkExtent2D extent() {
     return impl::singleton->swapchain->extent();
+}
+
+VkFormat format() {
+    return impl::singleton->swapchain->format();
 }
 
 void begin_frame() {

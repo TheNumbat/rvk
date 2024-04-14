@@ -28,6 +28,7 @@ struct Config {
     bool robust_accesses = true;
     bool ray_tracing = false;
     bool imgui = false;
+    bool hdr = false;
 
     u32 frames_in_flight = 2;
     u32 descriptors_per_type = 128;
@@ -41,6 +42,7 @@ struct Config {
 };
 
 bool startup(Config config);
+void hdr(bool enable);
 void shutdown();
 void reset_imgui();
 void wait_idle();
@@ -54,6 +56,7 @@ u32 frame();
 u32 frame_count();
 u32 previous_frame();
 VkExtent2D extent();
+VkFormat format();
 
 // Frame lifecycle
 

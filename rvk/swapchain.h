@@ -41,7 +41,8 @@ private:
 struct Swapchain {
 
     explicit Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_device,
-                       Arc<Device, Alloc> device, VkSurfaceKHR surface, u32 frames_in_flight);
+                       Arc<Device, Alloc> device, VkSurfaceKHR surface, u32 frames_in_flight,
+                       bool hdr);
     ~Swapchain();
 
     Swapchain(const Swapchain&) = delete;
@@ -75,7 +76,7 @@ struct Swapchain {
     static VkExtent2D choose_extent(VkSurfaceCapabilitiesKHR capabilities);
 
 private:
-    static VkSurfaceFormatKHR choose_format(Slice<const VkSurfaceFormatKHR> formats);
+    static VkSurfaceFormatKHR choose_format(Slice<const VkSurfaceFormatKHR> formats, bool hdr);
     static VkPresentModeKHR choose_present_mode(Slice<const VkPresentModeKHR> modes);
 
     Arc<Device, Alloc> device;

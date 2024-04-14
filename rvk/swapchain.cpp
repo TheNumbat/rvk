@@ -20,13 +20,13 @@ static void swapchain_image_setup(Commands& commands, VkImage image);
 static VkImageView swapchain_image_view(VkDevice device, VkImage image, VkFormat format);
 
 Swapchain::Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_device,
-                     Arc<Device, Alloc> D, VkSurfaceKHR surface, u32 frames_in_flight)
+                     Arc<Device, Alloc> D, VkSurfaceKHR surface, u32 frames_in_flight, bool hdr)
     : device(move(D)), frames_in_flight(frames_in_flight) {
 
     Profile::Time_Point start = Profile::timestamp();
 
     Region(R) {
-        surface_format = choose_format(physical_device->surface_formats<R>(surface).slice());
+        surface_format = choose_format(physical_device->surface_formats<R>(surface).slice(), hdr);
         present_mode = choose_present_mode(physical_device->present_modes<R>(surface).slice());
     }
 
@@ -131,30 +131,56 @@ Swapchain::~Swapchain() {
     swapchain = null;
 }
 
-VkSurfaceFormatKHR Swapchain::choose_format(Slice<const VkSurfaceFormatKHR> formats) {
-
-    VkSurfaceFormatKHR result;
+VkSurfaceFormatKHR Swapchain::choose_format(Slice<const VkSurfaceFormatKHR> formats, bool hdr) {
 
     if(formats.length() == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
-        result.format = VK_FORMAT_B8G8R8A8_UNORM;
-        result.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
-        warn("[rvk] Found undefined surface format, using default.");
-        return result;
+        warn("[rvk] Got undefined surface format, using SDR default.");
+        return VkSurfaceFormatKHR{
+            .format = VK_FORMAT_B8G8R8A8_SRGB,
+            .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+        };
     }
 
     assert(formats.length() < UINT32_MAX);
-    for(u32 i = 0; i < formats.length(); i++) {
-        VkSurfaceFormatKHR fmt = formats[i];
-        if(fmt.format == VK_FORMAT_B8G8R8A8_UNORM &&
-           fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 
-            info("[rvk] Found desired swapchain surface format.");
-            return fmt;
+    if(hdr) {
+        for(u32 i = 0; i < formats.length(); i++) {
+            if(formats[i].colorSpace == VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT) {
+                info("[rvk] Found HDR surface format (Linear->Extended sRGB).");
+                return formats[i];
+            }
+        }
+        for(u32 i = 0; i < formats.length(); i++) {
+            if(formats[i].colorSpace == VK_COLOR_SPACE_HDR10_HLG_EXT) {
+                info("[rvk] Found HDR surface format (HDR10_HLG).");
+                return formats[i];
+            }
+        }
+        for(u32 i = 0; i < formats.length(); i++) {
+            if(formats[i].colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT) {
+                info("[rvk] Found HDR surface format (HDR10_ST2084).");
+                return formats[i];
+            }
+        }
+        for(u32 i = 0; i < formats.length(); i++) {
+            if(formats[i].colorSpace == VK_COLOR_SPACE_DOLBYVISION_EXT) {
+                info("[rvk] Found HDR surface format (DolbyVision).");
+                return formats[i];
+            }
+        }
+        warn("[rvk] HDR surface format not found, using SDR.");
+    }
+
+    for(u32 i = 0; i < formats.length(); i++) {
+        if(formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR &&
+           formats[i].format == VK_FORMAT_B8G8R8A8_SRGB) {
+            info("[rvk] Found SDR surface format (Linear->sRGB).");
+            return formats[i];
         }
     }
 
-    warn("[rvk] Desired swapchain surface format not found, using first one.");
+    warn("[rvk] Desired surface format not found, using first one.");
     return formats[0];
 }
 

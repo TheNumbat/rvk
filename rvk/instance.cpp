@@ -123,7 +123,7 @@ Slice<const char*> Instance::baseline_extensions() {
 }
 
 Instance::Instance(Slice<const String_View> extensions, Slice<const String_View> layers,
-                   Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation) {
+                   Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation, bool hdr) {
 
     Profile::Time_Point start = Profile::timestamp();
 
@@ -148,6 +148,9 @@ Instance::Instance(Slice<const String_View> extensions, Slice<const String_View>
         }
         for(auto& required : baseline_extensions()) {
             extension_names.push(required);
+        }
+        if(hdr) {
+            extension_names.push(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
         }
 
         check_extensions(extension_names.slice());

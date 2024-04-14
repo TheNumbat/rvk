@@ -51,7 +51,7 @@ struct Instance {
 
 private:
     explicit Instance(Slice<const String_View> extensions, Slice<const String_View> layers,
-                      Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation);
+                      Function<VkSurfaceKHR(VkInstance)> create_surface, bool validation, bool hdr);
     friend struct Arc<Instance, Alloc>;
 
     void check_extensions(Slice<const char*> extensions);
