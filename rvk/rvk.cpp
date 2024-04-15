@@ -248,7 +248,15 @@ void Vk::imgui() {
     Text("Extent: %ux%u", swapchain->extent().width, swapchain->extent().height);
 
     if(TreeNodeEx("Device Heaps", ImGuiTreeNodeFlags_DefaultOpen)) {
-        for(auto& device_memory : device_memories) device_memory->imgui();
+        i32 i = 0;
+        for(auto& device_memory : device_memories) {
+            PushID(i++);
+            if(TreeNodeEx("##heap", ImGuiTreeNodeFlags_DefaultOpen, "[%d]", i)) {
+                device_memory->imgui();
+                TreePop();
+            }
+            PopID();
+        }
         TreePop();
     }
     if(TreeNodeEx("Host Heap", ImGuiTreeNodeFlags_DefaultOpen)) {
