@@ -72,9 +72,14 @@ struct Image {
     operator VkImage() const {
         return image;
     }
-    VkFormat format() {
+    VkFormat format() const {
         return format_;
     }
+    VkExtent3D extent() const {
+        return extent_;
+    }
+
+    u64 linear_size() const;
 
     Image_View view(VkImageAspectFlags aspect);
 
@@ -85,6 +90,7 @@ struct Image {
                     VkAccessFlags2 dst_access);
 
     void from_buffer(Commands& commands, Buffer buffer);
+    void to_buffer(Commands& commands, Buffer& buffer);
 
 private:
     explicit Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,

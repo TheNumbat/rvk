@@ -628,7 +628,8 @@ Commands make_commands(Queue_Family family) {
 }
 
 Opt<Buffer> make_staging(u64 size) {
-    return impl::singleton->host_memory->make(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    return impl::singleton->host_memory->make(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 }
 
 Opt<Buffer> make_buffer(u64 size, VkBufferUsageFlags usage) {
