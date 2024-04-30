@@ -703,6 +703,10 @@ Descriptor_Set make_set(Descriptor_Set_Layout& layout, u32 variable_count) {
                                                   variable_count);
 }
 
+Descriptor_Set make_single_set(Descriptor_Set_Layout& layout, u32 variable_count) {
+    return impl::singleton->descriptor_pool->make(layout, 1, variable_count);
+}
+
 Box<Shader_Loader, Alloc> make_shader_loader() {
     return Box<Shader_Loader, Alloc>::make(impl::singleton->device.dup());
 }

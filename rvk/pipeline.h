@@ -134,7 +134,8 @@ struct Pipeline {
     Pipeline& operator=(Pipeline&& src);
 
     void bind(Commands& cmds);
-    void bind_set(Commands& cmds, Descriptor_Set& set, u32 set_index = 0);
+    void bind_set(Commands& cmds, Descriptor_Set& set, u32 set_index);
+    void bind_set(Commands& cmds, Descriptor_Set& set, u32 set_index, u32 frame_slot);
 
     template<Push_Constant P>
     void push(Commands& cmds, const typename P::T& data) {

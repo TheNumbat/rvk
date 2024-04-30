@@ -92,6 +92,7 @@ template<Type_List L>
 Descriptor_Set_Layout make_layout(Slice<const u32> counts = Slice<const u32>{});
 
 Descriptor_Set make_set(Descriptor_Set_Layout& layout, u32 variable_count = 0);
+Descriptor_Set make_single_set(Descriptor_Set_Layout& layout, u32 variable_count = 0);
 
 template<Type_List L, Binding... Binds>
     requires(Same<L, List<Binds...>>)

@@ -204,4 +204,10 @@ void Pipeline::bind_set(Commands& cmds, Descriptor_Set& set, u32 set_index) {
     vkCmdBindDescriptorSets(cmds, bind_point(kind), layout, set_index, 1, &s, 0, null);
 }
 
+void Pipeline::bind_set(Commands& cmds, Descriptor_Set& set, u32 set_index, u32 frame_slot) {
+    assert(pipeline);
+    VkDescriptorSet s = set.get(frame_slot);
+    vkCmdBindDescriptorSets(cmds, bind_point(kind), layout, set_index, 1, &s, 0, null);
+}
+
 } // namespace rvk::impl

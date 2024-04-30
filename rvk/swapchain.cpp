@@ -267,7 +267,7 @@ void Compositor::render(Commands& cmds, u64 frame_index, u64 slot_index, bool ha
     };
 
     pipeline.bind(cmds);
-    pipeline.bind_set(cmds, ds);
+    pipeline.bind_set(cmds, ds, 0);
 
     vkCmdBeginRendering(cmds, &info);
     vkCmdDraw(cmds, 4, 1, 0, 0);
