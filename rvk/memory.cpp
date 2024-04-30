@@ -422,10 +422,10 @@ void Image::to_buffer(Commands& commands, Buffer& buffer) {
     };
 
     VkCopyImageToBufferInfo2 copy_info = {
-        .sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
+        .sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2,
         .pNext = null,
         .srcImage = image,
-        .srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         .dstBuffer = buffer,
         .regionCount = 1,
         .pRegions = &copy,
