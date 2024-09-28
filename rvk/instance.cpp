@@ -352,7 +352,7 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
                     if(device->supports_extension(String_View{extension})) {
                         info("[rvk] Found extension: %", String_View{extension});
                     } else {
-                        info("[rvk] Device does not support extension %", extension);
+                        info("[rvk] Device does not support extension %", String_View{extension});
                         supported = false;
                         break;
                     }
@@ -363,7 +363,7 @@ Arc<Physical_Device, Alloc> Instance::physical_device(VkSurfaceKHR surface, bool
                             info("[rvk] Found ray tracing extension: %", String_View{extension});
                         } else {
                             info("[rvk] Device does not support ray tracing extension %",
-                                 extension);
+                                 String_View{extension});
                             supported = false;
                             break;
                         }

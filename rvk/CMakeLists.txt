@@ -93,7 +93,7 @@ elseif(CLANG)
         message(FATAL_ERROR "Unsupported Clang version: only 17+ is supported.")
     endif()
 
-    target_compile_options(rvk PRIVATE -Wall -Wextra -fno-exceptions -fno-rtti)
+    target_compile_options(rvk PRIVATE -Wall -Wextra -fno-exceptions -fno-rtti -Wno-missing-field-initializers)
 else()
     message(FATAL_ERROR "Unsupported compiler: only MSVC and Clang are supported.")
 endif()
