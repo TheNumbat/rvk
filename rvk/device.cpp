@@ -327,6 +327,29 @@ Opt<u32> Physical_Device::heap_index(u32 mask, u32 type) {
     return {};
 }
 
+Opt<u32> Physical_Device::largest_heap(u32 type) {
+    Region(R) {
+        Vec<Pair<u32, u64>, Mregion<R>> heaps(properties_.memory.memoryProperties.memoryTypeCount);
+
+        for(u32 i = 0; i < properties_.memory.memoryProperties.memoryTypeCount; i++) {
+            if((properties_.memory.memoryProperties.memoryTypes[i].propertyFlags & type) == type) {
+                heaps.push(Pair{i, properties_.memory.memoryProperties.memoryHeaps[i].size});
+            }
+        }
+
+        if(heaps.empty()) return {};
+
+        u32 best = 0;
+        for(u32 i = 1; i < heaps.length(); i++) {
+            if(heaps[i].second > heaps[best].second) {
+                best = i;
+            }
+        }
+
+        return Opt{heaps[best].first};
+    }
+}
+
 VkSurfaceCapabilitiesKHR Physical_Device::capabilities(VkSurfaceKHR surface) {
     VkSurfaceCapabilitiesKHR capabilities;
     RVK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &capabilities));
@@ -529,18 +552,16 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
         // Find heaps
 
         {
-            if(auto idx =
-                   physical_device->heap_index(RPP_UINT32_MAX, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            if(auto idx = physical_device->largest_heap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
                idx.ok()) {
                 device_memory_index = *idx;
             } else {
                 die("[rvk] No device local heap found.");
             }
 
-            if(auto idx = physical_device->heap_index(RPP_UINT32_MAX,
-                                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                                                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+            if(auto idx = physical_device->largest_heap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                                                        VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
                idx.ok()) {
                 host_memory_index = *idx;
             } else {

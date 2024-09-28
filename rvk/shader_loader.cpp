@@ -10,6 +10,21 @@ impl::Shader& Shader_Loader::get(Token token) {
     return shaders.get(token).first;
 }
 
+Shader_Loader::Token Shader_Loader::compile(Slice<const u8> spirv) {
+    assert(device.ok());
+
+    Shader shader{device.dup(), spirv};
+    Files::Write_Watcher watcher{""_v};
+
+    Token token = next_token.incr();
+    {
+        Thread::Lock lock{mutex};
+        shaders.insert(token, Pair{move(shader), move(watcher)});
+    }
+
+    return token;
+}
+
 Shader_Loader::Token Shader_Loader::compile(String_View path) {
     assert(device.ok());
 

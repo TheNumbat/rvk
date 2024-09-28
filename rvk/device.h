@@ -45,6 +45,7 @@ struct Physical_Device {
     u64 heap_size(u32 heap);
     Pair<u64, u64> heap_stat(u32 heap);
     Opt<u32> heap_index(u32 mask, u32 properties);
+    Opt<u32> largest_heap(u32 properties);
 
     bool supports_extension(String_View name);
     VkSurfaceCapabilitiesKHR capabilities(VkSurfaceKHR surface);

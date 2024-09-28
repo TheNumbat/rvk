@@ -27,6 +27,7 @@ struct Shader_Loader {
 
     Shader& get(Token token);
 
+    Token compile(Slice<const u8> spirv);
     Token compile(String_View path);
     Async::Task<Token> compile_async(Async::Pool<>& pool, String_View path);
 

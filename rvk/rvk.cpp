@@ -177,10 +177,33 @@ Vk::Vk(Config config) {
     device = Arc<Device, Alloc>::make(physical_device.dup(), instance->surface(),
                                       config.ray_tracing, config.robust_accesses);
 
-    host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
-                                                  config.host_heap);
-
+    u64 max_allocation = physical_device->max_allocation();
     {
+        u64 heap_size = device->heap_size(Heap::host);
+        if(heap_size < Math::MB(64)) {
+            die("Host heap is too small: %mb / 64mb.", heap_size / Math::MB(1));
+        }
+        if(config.host_heap > max_allocation) {
+            warn("Requested host heap is larger than the max allocation size, using max.");
+            config.host_heap = max_allocation;
+        }
+        if(config.host_heap > heap_size) {
+            warn("Requested host heap is larger than available, using entire heap.");
+            config.host_heap = heap_size;
+        }
+        host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
+                                                      config.host_heap);
+    }
+    {
+        u64 heap_size = device->heap_size(Heap::device);
+        if(heap_size < Math::MB(128)) {
+            die("Device heap is too small: %mb / 128mb.", heap_size / Math::MB(1));
+        }
+        if(config.device_heap_margin > heap_size) {
+            warn("Requested device heap margin is larger than the heap, using 64mb margin.");
+            config.device_heap_margin = Math::MB(64);
+        }
+
         u64 allocated = 0;
         u64 target = device->heap_size(Heap::device) - config.device_heap_margin;
         while(allocated < target) {
