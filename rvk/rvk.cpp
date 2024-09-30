@@ -181,14 +181,14 @@ Vk::Vk(Config config) {
     {
         u64 heap_size = device->heap_size(Heap::host);
         if(heap_size < Math::MB(64)) {
-            die("Host heap is too small: %mb / 64mb.", heap_size / Math::MB(1));
+            die("[rvk] Host heap is too small: %mb / 64mb.", heap_size / Math::MB(1));
         }
         if(config.host_heap > max_allocation) {
-            warn("Requested host heap is larger than the max allocation size, using max.");
+            warn("[rvk] Requested host heap is larger than the max allocation size, using max.");
             config.host_heap = max_allocation;
         }
         if(config.host_heap > heap_size) {
-            warn("Requested host heap is larger than available, using entire heap.");
+            warn("[rvk] Requested host heap is larger than available, using entire heap.");
             config.host_heap = heap_size;
         }
         host_memory = Arc<Device_Memory, Alloc>::make(physical_device, device.dup(), Heap::host,
@@ -197,10 +197,10 @@ Vk::Vk(Config config) {
     {
         u64 heap_size = device->heap_size(Heap::device);
         if(heap_size < Math::MB(128)) {
-            die("Device heap is too small: %mb / 128mb.", heap_size / Math::MB(1));
+            die("[rvk] Device heap is too small: %mb / 128mb.", heap_size / Math::MB(1));
         }
         if(config.device_heap_margin > heap_size) {
-            warn("Requested device heap margin is larger than the heap, using 64mb margin.");
+            warn("[rvk] Requested device heap margin is larger than the heap, using 64mb margin.");
             config.device_heap_margin = Math::MB(64);
         }
 

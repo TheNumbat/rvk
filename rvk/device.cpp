@@ -552,11 +552,19 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
         // Find heaps
 
         {
-            if(auto idx = physical_device->largest_heap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-               idx.ok()) {
+            u32 device_heap_type = 0;
+            if(physical_device->properties().is_discrete()) {
+                device_heap_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            } else {
+                info("[rvk] GPU is integrated, using host coherent heap as device heap.");
+                device_heap_type =
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            }
+
+            if(auto idx = physical_device->largest_heap(device_heap_type); idx.ok()) {
                 device_memory_index = *idx;
             } else {
-                die("[rvk] No device local heap found.");
+                die("[rvk] No device heap found.");
             }
 
             if(auto idx = physical_device->largest_heap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -565,7 +573,7 @@ Device::Device(Arc<Physical_Device, Alloc> P, VkSurfaceKHR surface, bool ray_tra
                idx.ok()) {
                 host_memory_index = *idx;
             } else {
-                die("[rvk] No host visible heap found.");
+                die("[rvk] No host cached heap found.");
             }
 
             info("[rvk] Found device and host heaps (%: %mb, %: %mb).", device_memory_index,
