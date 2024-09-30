@@ -112,7 +112,7 @@ static VkBool32 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT sev,
     if(is_error) RPP_DEBUG_BREAK;
 #endif
 
-    return is_error;
+    return false;
 }
 
 Slice<const char*> Instance::baseline_extensions() {

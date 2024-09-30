@@ -199,13 +199,13 @@ Vk::Vk(Config config) {
         if(heap_size < Math::MB(128)) {
             die("[rvk] Device heap is too small: %mb / 128mb.", heap_size / Math::MB(1));
         }
-        if(config.device_heap_margin > heap_size) {
-            warn("[rvk] Requested device heap margin is larger than the heap, using 64mb margin.");
-            config.device_heap_margin = Math::MB(64);
+        if(config.device_heap > heap_size) {
+            warn("[rvk] Requested device margin is larger than available, using entire heap.");
+            config.device_heap = heap_size;
         }
 
         u64 allocated = 0;
-        u64 target = device->heap_size(Heap::device) - config.device_heap_margin;
+        u64 target = config.device_heap;
         while(allocated < target) {
             u64 size = Math::min(target - allocated, physical_device->max_allocation());
             device_memories.push(

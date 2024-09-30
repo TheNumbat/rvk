@@ -38,7 +38,7 @@ struct Config {
     Function<VkSurfaceKHR(VkInstance)> create_surface;
 
     u64 host_heap = Math::GB(1);
-    u64 device_heap_margin = Math::GB(1);
+    u64 device_heap = Math::MB(4094);
 };
 
 bool startup(Config config);
@@ -118,13 +118,13 @@ void submit(Commands& cmds, u32 index, Slice<const Sem_Ref> wait, Slice<const Se
 
 template<typename F>
     requires Invocable<F, Commands&>
-auto sync(F&& f, Queue_Family family = Queue_Family::graphics, u32 index = 0)
-    -> Invoke_Result<F, Commands&>;
+auto sync(F&& f, Queue_Family family = Queue_Family::graphics,
+          u32 index = 0) -> Invoke_Result<F, Commands&>;
 
 template<typename F>
     requires Invocable<F, Commands&>
-auto async(Async::Pool<>& pool, F&& f, Queue_Family family = Queue_Family::graphics, u32 index = 0)
-    -> Async::Task<Invoke_Result<F, Commands&>>;
+auto async(Async::Pool<>& pool, F&& f, Queue_Family family = Queue_Family::graphics,
+           u32 index = 0) -> Async::Task<Invoke_Result<F, Commands&>>;
 
 } // namespace rvk
 
