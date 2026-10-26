@@ -93,6 +93,8 @@ struct Image {
     void to_buffer(Commands& commands, Buffer& buffer);
 
 private:
+    void release();
+
     explicit Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
                    VkFormat format, VkExtent3D extent);
 
@@ -128,6 +130,8 @@ struct Image_View {
     }
 
 private:
+    void release();
+
     Arc<Device, Alloc> device;
 
     VkImageView view = null;
@@ -164,6 +168,8 @@ struct Sampler {
     }
 
 private:
+    void release();
+
     Arc<Device, Alloc> device;
     VkSampler sampler = null;
 };
@@ -199,6 +205,8 @@ struct Buffer {
     }
 
 private:
+    void release();
+
     explicit Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address,
                     VkBuffer buffer, u64 len);
 

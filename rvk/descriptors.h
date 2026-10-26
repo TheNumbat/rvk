@@ -25,6 +25,8 @@ struct Descriptor_Set_Layout {
     }
 
 private:
+    void release();
+
     explicit Descriptor_Set_Layout(Arc<Device, Alloc> device,
                                    Slice<const VkDescriptorSetLayoutBinding> bindings,
                                    Slice<const VkDescriptorBindingFlags> flags);
@@ -46,7 +48,7 @@ struct Descriptor_Set {
     Descriptor_Set(const Descriptor_Set&) = delete;
     Descriptor_Set& operator=(const Descriptor_Set&) = delete;
     Descriptor_Set(Descriptor_Set&& src) = default;
-    Descriptor_Set& operator=(Descriptor_Set&& src) = default;
+    Descriptor_Set& operator=(Descriptor_Set&& src) noexcept;
 
     void write(u64 frame_index, Slice<const VkWriteDescriptorSet> writes);
 
@@ -55,6 +57,8 @@ struct Descriptor_Set {
     }
 
 private:
+    void release();
+
     explicit Descriptor_Set(Arc<Descriptor_Pool, Alloc> pool, Vec<VkDescriptorSet, Alloc> sets);
 
     Arc<Descriptor_Pool, Alloc> pool;

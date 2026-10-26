@@ -101,9 +101,22 @@ Descriptor_Set::Descriptor_Set(Arc<Descriptor_Pool, Alloc> pool, Vec<VkDescripto
 }
 
 Descriptor_Set::~Descriptor_Set() {
+    release();
+}
+
+void Descriptor_Set::release() {
     if(sets.length()) {
         pool->release(*this);
+        sets.clear();
     }
+}
+
+Descriptor_Set& Descriptor_Set::operator=(Descriptor_Set&& src) noexcept {
+    if(this == &src) return *this;
+    release();
+    pool = move(src.pool);
+    sets = move(src.sets);
+    return *this;
 }
 
 void Descriptor_Set::write(u64 frame_index, Slice<const VkWriteDescriptorSet> writes) {
@@ -146,17 +159,22 @@ Descriptor_Set_Layout::Descriptor_Set_Layout(Arc<Device, Alloc> D,
 }
 
 Descriptor_Set_Layout::~Descriptor_Set_Layout() {
+    release();
+}
+
+void Descriptor_Set_Layout::release() {
     if(layout) vkDestroyDescriptorSetLayout(*device, layout, null);
     layout = null;
 }
 
-Descriptor_Set_Layout::Descriptor_Set_Layout(Descriptor_Set_Layout&& src) {
-    *this = move(src);
+Descriptor_Set_Layout::Descriptor_Set_Layout(Descriptor_Set_Layout&& src)
+    : device(move(src.device)), layout(src.layout) {
+    src.layout = null;
 }
 
 Descriptor_Set_Layout& Descriptor_Set_Layout::operator=(Descriptor_Set_Layout&& src) {
-    assert(this != &src);
-    this->~Descriptor_Set_Layout();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     layout = src.layout;
     src.layout = null;

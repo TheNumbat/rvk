@@ -40,6 +40,8 @@ struct Shader {
     }
 
 private:
+    void release();
+
     Arc<Device, Alloc> device;
     VkShaderModule shader = null;
 };
@@ -154,6 +156,8 @@ struct Pipeline {
     }
 
 private:
+    void release();
+
     explicit Pipeline(Arc<Device, Alloc> device, Info info);
     friend struct Compositor;
     friend struct Vk;

@@ -184,9 +184,13 @@ Opt<Buffer> Device_Memory::make(u64 size, VkBufferUsageFlags usage) {
 
 Image::Image(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, VkImage image,
              VkFormat format, VkExtent3D extent)
-    : memory(move(memory)), image(image), format_(format), extent_(extent), address(address){};
+    : memory(move(memory)), image(image), format_(format), extent_(extent), address(address) {};
 
 Image::~Image() {
+    release();
+}
+
+void Image::release() {
     if(image) {
         vkDestroyImage(*memory->device, image, null);
         memory->release(address);
@@ -197,13 +201,18 @@ Image::~Image() {
     format_ = VK_FORMAT_UNDEFINED;
 }
 
-Image::Image(Image&& src) {
-    *this = move(src);
+Image::Image(Image&& src)
+    : memory(move(src.memory)), image(src.image), format_(src.format_), extent_(src.extent_),
+      address(src.address) {
+    src.image = null;
+    src.format_ = VK_FORMAT_UNDEFINED;
+    src.extent_ = {};
+    src.address = null;
 }
 
 Image& Image::operator=(Image&& src) {
-    assert(this != &src);
-    this->~Image();
+    if(this == &src) return *this;
+    release();
     memory = move(src.memory);
     image = src.image;
     src.image = null;
@@ -500,17 +509,23 @@ Image_View::Image_View(Image& image, VkImageAspectFlags aspect)
 }
 
 Image_View::~Image_View() {
+    release();
+}
+
+void Image_View::release() {
     if(view) vkDestroyImageView(*device, view, null);
     view = null;
 }
 
-Image_View::Image_View(Image_View&& src) {
-    *this = move(src);
+Image_View::Image_View(Image_View&& src)
+    : device(move(src.device)), view(src.view), aspect_mask(src.aspect_mask) {
+    src.view = null;
+    src.aspect_mask = 0;
 }
 
 Image_View& Image_View::operator=(Image_View&& src) {
-    assert(this != &src);
-    this->~Image_View();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     view = src.view;
     src.view = null;
@@ -537,17 +552,21 @@ Sampler::Sampler(Arc<Device, Alloc> D, Sampler::Config config) : device(move(D))
 }
 
 Sampler::~Sampler() {
+    release();
+}
+
+void Sampler::release() {
     if(sampler) vkDestroySampler(*device, sampler, null);
     sampler = null;
 }
 
-Sampler::Sampler(Sampler&& src) {
-    *this = move(src);
+Sampler::Sampler(Sampler&& src) : device(move(src.device)), sampler(src.sampler) {
+    src.sampler = null;
 }
 
 Sampler& Sampler::operator=(Sampler&& src) {
-    assert(this != &src);
-    this->~Sampler();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     sampler = src.sampler;
     src.sampler = null;
@@ -560,6 +579,10 @@ Buffer::Buffer(Arc<Device_Memory, Alloc> memory, Heap_Allocator::Range address, 
 }
 
 Buffer::~Buffer() {
+    release();
+}
+
+void Buffer::release() {
     if(buffer) {
         vkDestroyBuffer(*memory->device, buffer, null);
         memory->release(address);
@@ -569,13 +592,16 @@ Buffer::~Buffer() {
     len = 0;
 }
 
-Buffer::Buffer(Buffer&& src) {
-    *this = move(src);
+Buffer::Buffer(Buffer&& src)
+    : memory(move(src.memory)), buffer(src.buffer), len(src.len), address(src.address) {
+    src.buffer = null;
+    src.len = 0;
+    src.address = null;
 }
 
 Buffer& Buffer::operator=(Buffer&& src) {
-    assert(this != &src);
-    this->~Buffer();
+    if(this == &src) return *this;
+    release();
     memory = move(src.memory);
     buffer = src.buffer;
     src.buffer = null;

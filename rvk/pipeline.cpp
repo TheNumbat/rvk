@@ -31,17 +31,21 @@ Shader::Shader(Arc<Device, Alloc> D, Slice<const u8> source) : device(move(D)) {
 }
 
 Shader::~Shader() {
+    release();
+}
+
+void Shader::release() {
     if(shader) vkDestroyShaderModule(*device, shader, null);
     shader = null;
 }
 
-Shader::Shader(Shader&& src) {
-    *this = move(src);
+Shader::Shader(Shader&& src) : device(move(src.device)), shader(src.shader) {
+    src.shader = null;
 }
 
 Shader& Shader::operator=(Shader&& src) {
-    assert(this != &src);
-    this->~Shader();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     shader = src.shader;
     src.shader = null;
@@ -169,19 +173,27 @@ Pipeline::Pipeline(Arc<Device, Alloc> D, Info info) : device(move(D)) {
 }
 
 Pipeline::~Pipeline() {
+    release();
+}
+
+void Pipeline::release() {
     if(layout) vkDestroyPipelineLayout(*device, layout, null);
     if(pipeline) vkDestroyPipeline(*device, pipeline, null);
     layout = null;
     pipeline = null;
 }
 
-Pipeline::Pipeline(Pipeline&& src) {
-    *this = move(src);
+Pipeline::Pipeline(Pipeline&& src)
+    : device(move(src.device)), kind(src.kind), pipeline(src.pipeline), layout(src.layout),
+      n_shaders(src.n_shaders) {
+    src.pipeline = null;
+    src.layout = null;
+    src.n_shaders = 0;
 }
 
 Pipeline& Pipeline::operator=(Pipeline&& src) {
-    assert(this != &src);
-    this->~Pipeline();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     kind = src.kind;
     layout = src.layout;

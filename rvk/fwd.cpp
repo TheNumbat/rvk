@@ -84,4 +84,4 @@ String_View describe(VkResult result) {
     }
 }
 
-} // namespace rvk
+} // namespace rvk::impl

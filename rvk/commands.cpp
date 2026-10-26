@@ -34,17 +34,21 @@ Fence::Fence(Arc<Device, Alloc> D) : device(move(D)) {
 }
 
 Fence::~Fence() {
+    release();
+}
+
+void Fence::release() {
     if(fence) vkDestroyFence(*device, fence, null);
     fence = null;
 }
 
-Fence::Fence(Fence&& src) {
-    *this = move(src);
+Fence::Fence(Fence&& src) : device(move(src.device)), fence(src.fence) {
+    src.fence = null;
 }
 
 Fence& Fence::operator=(Fence&& src) {
-    assert(this != &src);
-    this->~Fence();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     fence = src.fence;
     src.fence = null;
@@ -101,17 +105,21 @@ Semaphore::Semaphore(Arc<Device, Alloc> D) : device(move(D)) {
 }
 
 Semaphore::~Semaphore() {
+    release();
+}
+
+void Semaphore::release() {
     if(semaphore) vkDestroySemaphore(*device, semaphore, null);
     semaphore = null;
 }
 
-Semaphore::Semaphore(Semaphore&& src) {
-    *this = move(src);
+Semaphore::Semaphore(Semaphore&& src) : device(move(src.device)), semaphore(src.semaphore) {
+    src.semaphore = null;
 }
 
 Semaphore& Semaphore::operator=(Semaphore&& src) {
-    assert(this != &src);
-    this->~Semaphore();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     semaphore = src.semaphore;
     src.semaphore = null;
@@ -123,8 +131,13 @@ Commands::Commands(Arc<Command_Pool, Alloc> pool, Queue_Family family, VkCommand
 }
 
 Commands::~Commands() {
+    release();
+}
+
+void Commands::release() {
     if(buffer) pool->release(buffer);
     buffer = null;
+    transient_buffers.clear();
 }
 
 Commands::Commands(Commands&& src) {
@@ -132,10 +145,10 @@ Commands::Commands(Commands&& src) {
 }
 
 Commands& Commands::operator=(Commands&& src) {
-    assert(this != &src);
-    this->~Commands();
+    if(this == &src) return *this;
     Thread::Lock l0(mutex);
     Thread::Lock l1(src.mutex);
+    release();
     pool = move(src.pool);
     transient_buffers = move(src.transient_buffers);
     family_ = src.family_;
@@ -218,38 +231,32 @@ void Command_Pool::release(VkCommandBuffer buffer) {
 }
 
 template<Queue_Family F>
-Command_Pool_Manager<F>::Command_Pool_Manager(Arc<Device, Alloc> device) : device(move(device)) {
+Command_Pool_Manager<F>::Command_Pool_Manager(Arc<Device, Alloc> device)
+    : device(move(device)), pools(Arc<Pools, Alloc>::make()) {
 }
 
 template<Queue_Family F>
 Command_Pool_Manager<F>::~Command_Pool_Manager() {
 
-    end_thread();
-    Thread::Lock lock(mutex);
-
-    if(!active_threads.empty()) {
-        warn("[rvk]: Active command pool set for family % is not empty: % remaining.", F,
-             active_threads.length());
-        active_threads.clear();
-    }
-
-    if(!free_list.empty()) {
-        free_list.clear();
-        info("[rvk] Destroyed command pools for family %.", F);
-    }
+    Thread::Lock lock(pools->mutex);
+    pools->closed = true;
+    pools->active_threads = {};
+    pools->free_list = {};
+    info("[rvk] Destroyed command pools for family %.", F);
 }
 
 template<Queue_Family F>
 void Command_Pool_Manager<F>::begin_thread() {
 
-    assert(!this_thread.pool.ok());
+    this_thread.release();
+    this_thread.pools = pools.dup();
 
     Thread::Id id = Thread::this_id();
-    Thread::Lock lock(mutex);
+    Thread::Lock lock(pools->mutex);
 
-    assert(!active_threads.contains(id));
+    assert(!pools->active_threads.contains(id));
 
-    if(free_list.empty()) {
+    if(pools->free_list.empty()) {
 
         Profile::Time_Point start = Profile::timestamp();
 
@@ -262,7 +269,7 @@ void Command_Pool_Manager<F>::begin_thread() {
         VkCommandPool pool = null;
         RVK_CHECK(vkCreateCommandPool(*device, &create_info, null, &pool));
 
-        this_thread.pool = Arc<Command_Pool, Alloc>::make(device.dup(), F, pool);
+        pools->active_threads.insert(id, Arc<Command_Pool, Alloc>::make(device.dup(), F, pool));
 
         Profile::Time_Point end = Profile::timestamp();
         info("[rvk] Allocated new % command pool for thread % in %ms.", F, id,
@@ -271,37 +278,20 @@ void Command_Pool_Manager<F>::begin_thread() {
     } else {
 
         info("[rvk] Reusing command pool for % in thread %.", F, id);
-        this_thread.pool = move(free_list.back());
-        free_list.pop();
+        pools->active_threads.insert(id, move(pools->free_list.back()));
+        pools->free_list.pop();
     }
-
-    this_thread.pool_manager = Ref{*this};
-    active_threads.insert(id, {});
-}
-
-template<Queue_Family F>
-void Command_Pool_Manager<F>::end_thread() {
-
-    if(!this_thread.pool.ok()) return;
-
-    assert(&*this_thread.pool_manager == this);
-
-    Thread::Id id = Thread::this_id();
-    Thread::Lock lock(mutex);
-
-    assert(active_threads.contains(id));
-
-    free_list.push(move(this_thread.pool));
-    active_threads.erase(id);
-
-    this_thread.pool = {};
-    this_thread.pool_manager = {};
 }
 
 template<Queue_Family F>
 Commands Command_Pool_Manager<F>::make() {
-    if(!this_thread.pool.ok()) begin_thread();
-    return this_thread.pool->make();
+    if(!this_thread.pools.ok() || &*this_thread.pools != &*pools) begin_thread();
+    Arc<Command_Pool, Alloc> pool;
+    {
+        Thread::Lock lock(pools->mutex);
+        pool = pools->active_threads.get(Thread::this_id()).dup();
+    }
+    return pool->make();
 }
 
 template struct Command_Pool_Manager<Queue_Family::graphics>;

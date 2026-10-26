@@ -8,9 +8,13 @@
 namespace rvk::impl {
 
 TLAS::TLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR accel, Buffer buf)
-    : device(move(device)), buffer(move(buf)), structure(accel){};
+    : device(move(device)), buffer(move(buf)), structure(accel) {};
 
 TLAS::~TLAS() {
+    release();
+}
+
+void TLAS::release() {
     if(structure) {
         vkDestroyAccelerationStructureKHR(*device, structure, null);
     }
@@ -23,8 +27,8 @@ TLAS::TLAS(TLAS&& src) : device(move(src.device)), buffer(move(src.buffer)) {
 }
 
 TLAS& TLAS::operator=(TLAS&& src) {
-    assert(this != &src);
-    this->~TLAS();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     buffer = move(src.buffer);
     structure = src.structure;
@@ -135,7 +139,7 @@ TLAS TLAS::build(Arc<Device, Alloc> device, Commands& cmds, Buffers buffers, Buf
 }
 
 BLAS::BLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR structure, Buffer buffer)
-    : device(move(device)), buffer(move(buffer)), structure(structure){};
+    : device(move(device)), buffer(move(buffer)), structure(structure) {};
 
 BLAS::BLAS(BLAS&& src) : device(move(src.device)), buffer(move(src.buffer)) {
     structure = src.structure;
@@ -143,6 +147,10 @@ BLAS::BLAS(BLAS&& src) : device(move(src.device)), buffer(move(src.buffer)) {
 }
 
 BLAS::~BLAS() {
+    release();
+}
+
+void BLAS::release() {
     if(structure) {
         vkDestroyAccelerationStructureKHR(*device, structure, null);
     }
@@ -150,8 +158,8 @@ BLAS::~BLAS() {
 }
 
 BLAS& BLAS::operator=(BLAS&& src) {
-    assert(this != &src);
-    this->~BLAS();
+    if(this == &src) return *this;
+    release();
     device = move(src.device);
     buffer = move(src.buffer);
     structure = src.structure;

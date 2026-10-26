@@ -34,6 +34,8 @@ struct Fence {
     Async::Event event() const;
 
 private:
+    void release();
+
     explicit Fence(Arc<Device, Alloc> device);
     friend struct Vk;
 
@@ -63,6 +65,8 @@ struct Semaphore {
     }
 
 private:
+    void release();
+
     explicit Semaphore(Arc<Device, Alloc> device);
     friend struct Vk;
 
@@ -92,6 +96,8 @@ struct Commands {
     void attach(Buffer buf);
 
 private:
+    void release();
+
     explicit Commands(Arc<Command_Pool, Alloc> pool, Queue_Family family, VkCommandBuffer buffer);
 
     Arc<Command_Pool, Alloc> pool;
@@ -157,23 +163,33 @@ private:
     friend struct Arc<Command_Pool_Manager, Alloc>;
 
     void begin_thread();
-    void end_thread();
+
+    struct Pools {
+        Thread::Mutex mutex;
+        Vec<Arc<Command_Pool, Alloc>, Alloc> free_list;
+        Map<Thread::Id, Arc<Command_Pool, Alloc>, Alloc> active_threads;
+        bool closed = false;
+    };
 
     struct This_Thread {
         ~This_Thread() {
-            if(pool_manager.ok()) pool_manager->end_thread();
+            release();
         }
-        Arc<Command_Pool, Alloc> pool;
-        Ref<Command_Pool_Manager> pool_manager;
+        void release() {
+            if(!pools.ok()) return;
+            Thread::Lock lock(pools->mutex);
+            if(pools->closed) return;
+            auto id = Thread::this_id();
+            pools->free_list.push(move(pools->active_threads.get(id)));
+            pools->active_threads.erase(id);
+        }
+        Arc<Pools, Alloc> pools;
     };
 
     static inline thread_local This_Thread this_thread;
 
     Arc<Device, Alloc> device;
-
-    Vec<Arc<Command_Pool, Alloc>, Alloc> free_list;
-    Map<Thread::Id, Empty<>, Alloc> active_threads;
-    Thread::Mutex mutex;
+    Arc<Pools, Alloc> pools;
 };
 
 } // namespace rvk::impl

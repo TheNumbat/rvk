@@ -36,6 +36,8 @@ struct TLAS {
     }
 
 private:
+    void release();
+
     explicit TLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR structure, Buffer buffer);
     friend struct Vk;
 
@@ -88,6 +90,8 @@ struct BLAS {
     }
 
 private:
+    void release();
+
     explicit BLAS(Arc<Device, Alloc> device, VkAccelerationStructureKHR structure, Buffer buffer);
     friend struct Vk;
 

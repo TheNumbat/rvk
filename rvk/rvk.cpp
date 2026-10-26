@@ -27,7 +27,7 @@ struct Deletion_Queue {
     Deletion_Queue(Deletion_Queue&& src) : deletion_queue(move(src.deletion_queue)) {
     }
     Deletion_Queue& operator=(Deletion_Queue&& src) {
-        assert(this != &src);
+        if(this == &src) return *this;
         deletion_queue = move(src.deletion_queue);
         return *this;
     }
@@ -62,7 +62,7 @@ struct Frame {
           complete(move(src.complete)), wait_for(move(src.wait_for)) {
     }
     Frame& operator=(Frame&& src) {
-        assert(this != &src);
+        if(this == &src) return *this;
         fence = move(src.fence);
         cmds = move(src.cmds);
         available = move(src.available);

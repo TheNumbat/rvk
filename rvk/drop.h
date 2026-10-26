@@ -29,8 +29,8 @@ struct Drop {
     }
 
     Drop& operator=(Drop&& src) {
-        assert(this != &src);
-        this->~Drop();
+        if(this == &src) return *this;
+        drop([r = move(resource)]() {});
         resource = move(src.resource);
         return *this;
     }
