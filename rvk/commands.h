@@ -31,6 +31,7 @@ struct Fence {
     void reset();
     void wait() const;
     bool ready() const;
+    // On Linux, exporting the completion event resets the fence's payload.
     Async::Event event() const;
 
 private:

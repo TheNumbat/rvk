@@ -86,6 +86,10 @@ i32 main() {
             [](VkInstance instance) {
                 return /* Create platform surface */;
             },
+        .drawable_extent =
+            []() -> VkExtent2D {
+                return /* Current framebuffer size in pixels, or {0, 0} when minimized */;
+            },
     });
 
     {

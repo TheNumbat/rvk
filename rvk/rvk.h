@@ -36,6 +36,7 @@ struct Config {
     Slice<const String_View> layers;
     Slice<const String_View> swapchain_extensions;
     Function<VkSurfaceKHR(VkInstance)> create_surface;
+    Function<VkExtent2D()> drawable_extent;
 
     u64 host_heap = Math::GB(1);
     u64 device_heap = Math::MB(4094);

@@ -20,7 +20,7 @@ Fence::Fence(Arc<Device, Alloc> D) : device(move(D)) {
 #ifdef RPP_OS_WINDOWS
         .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT,
 #else
-        .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT,
+        .handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT,
 #endif
     };
 
@@ -81,9 +81,17 @@ Async::Event Fence::event() const {
     VkFenceGetFdInfoKHR info = {
         .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
         .fence = fence,
-        .handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT,
+        .handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT,
     };
-    RVK_CHECK(vkGetFenceFdKHR(*device, &info, &fd));
+    VkResult result = vkGetFenceFdKHR(*device, &info, &fd);
+    if(result != VK_SUCCESS) {
+        die("[rvk] Failed to export fence: %", describe(result));
+    }
+    if(fd == -1) {
+        Async::Event event;
+        event.signal();
+        return event;
+    }
     return Async::Event::of_sys(fd, EPOLLIN);
 #endif
 }

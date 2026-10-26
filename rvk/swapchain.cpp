@@ -20,8 +20,9 @@ static void swapchain_image_setup(Commands& commands, VkImage image);
 static VkImageView swapchain_image_view(VkDevice device, VkImage image, VkFormat format);
 
 Swapchain::Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_device,
-                     Arc<Device, Alloc> D, VkSurfaceKHR surface, u32 frames_in_flight, bool hdr)
-    : device(move(D)), frames_in_flight(frames_in_flight) {
+                     Arc<Device, Alloc> D, VkSurfaceKHR surface, VkExtent2D extent,
+                     u32 frames_in_flight, bool hdr)
+    : device(move(D)), frames_in_flight(frames_in_flight), extent_(extent) {
 
     Profile::Time_Point start = Profile::timestamp();
 
@@ -31,7 +32,6 @@ Swapchain::Swapchain(Commands& cmds, Arc<Physical_Device, Alloc>& physical_devic
     }
 
     auto capabilities = physical_device->capabilities(surface);
-    extent_ = choose_extent(capabilities);
 
     info("[rvk] Creating swapchain with dimensions %x%...", extent_.width, extent_.height);
 
@@ -205,9 +205,13 @@ VkPresentModeKHR Swapchain::choose_present_mode(Slice<const VkPresentModeKHR> mo
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D Swapchain::choose_extent(VkSurfaceCapabilitiesKHR capabilities) {
+VkExtent2D Swapchain::choose_extent(VkSurfaceCapabilitiesKHR capabilities,
+                                    VkExtent2D drawable_extent) {
 
+    if(!drawable_extent.width || !drawable_extent.height) return {};
     VkExtent2D ext = capabilities.currentExtent;
+    if(ext.width == RPP_UINT32_MAX) ext = drawable_extent;
+    if(!ext.width || !ext.height) return {};
     ext.width = Math::clamp(ext.width, capabilities.minImageExtent.width,
                             capabilities.maxImageExtent.width);
     ext.height = Math::clamp(ext.height, capabilities.minImageExtent.height,

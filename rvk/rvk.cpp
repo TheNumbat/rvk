@@ -109,6 +109,9 @@ struct Vk {
     Vec<Frame, Alloc> frames;
     Vec<Deletion_Queue, Alloc> deletion_queues;
 
+    Function<VkExtent2D()> drawable_extent;
+    VkExtent2D last_drawable_extent = {};
+
     struct State {
         bool has_imgui = false;
         bool has_validation = false;
@@ -136,6 +139,7 @@ struct Vk {
     void create_imgui();
     void destroy_imgui();
     void recreate_swapchain();
+    VkExtent2D surface_extent();
 
     void wait_idle();
     void begin_frame();
@@ -159,7 +163,7 @@ struct Vk {
 
 static Opt<Vk> singleton;
 
-Vk::Vk(Config config) {
+Vk::Vk(Config config) : drawable_extent(move(config.drawable_extent)) {
 
     state.has_hdr = config.hdr;
     state.has_imgui = config.imgui;
@@ -243,9 +247,13 @@ Vk::Vk(Config config) {
     { // Can't use sync() yet because we haven't finished creating the Vk singleton
         auto fence = make_fence();
         auto cmds = graphics_command_pool->make();
+        auto extent = surface_extent();
+        if(!extent.width || !extent.height) {
+            die("[rvk] Cannot create the initial swapchain for a zero-sized drawable.");
+        }
         swapchain =
             Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(), instance->surface(),
-                                        config.frames_in_flight, state.is_hdr);
+                                        extent, config.frames_in_flight, state.is_hdr);
         cmds.end();
         device->submit(cmds, 0, fence);
         fence.wait();
@@ -345,8 +353,6 @@ void Vk::wait_idle() {
 
 void Vk::begin_frame() {
 
-    state.resized_last_frame = false;
-
     // If we wrapped all the way around the in flight frames and got to a frame that
     // is still executing, wait for it to finish so we can free/reuse its resources.
     Trace("Wait for frame slot") {
@@ -358,12 +364,11 @@ void Vk::begin_frame() {
         deletion_queues[state.frame_index].clear();
     }
 
-    if(state.has_imgui) {
-        ImGui_ImplVulkan_NewFrame();
-        ImGui::NewFrame();
+    auto drawable = drawable_extent();
+    if(state.minimized || drawable.width != last_drawable_extent.width ||
+       drawable.height != last_drawable_extent.height) {
+        recreate_swapchain();
     }
-
-    if(state.minimized) return;
 
     // Get next swapchain image. This will return immediately with the index of the
     // next swapchain image that we will use. When that image is actually ready,
@@ -374,19 +379,28 @@ void Vk::begin_frame() {
     //  frame fence --> user commands -|barrier
     //                                 v
     //         img acq -frame.avail->  x  -frame.finish-> presentation -implicit-> img acq
-    VkResult result;
-    Trace("Acquire next image") {
-        result = vkAcquireNextImageKHR(*device, *swapchain, RPP_UINT64_MAX,
-                                       frames[state.frame_index].available, null,
-                                       &state.swapchain_index);
+    while(!state.minimized) {
+        VkResult result;
+        Trace("Acquire next image") {
+            result = vkAcquireNextImageKHR(*device, *swapchain, RPP_UINT64_MAX,
+                                           frames[state.frame_index].available, null,
+                                           &state.swapchain_index);
+        }
+
+        if(result == VK_ERROR_OUT_OF_DATE_KHR) {
+            info("[rvk] Swapchain out of date, recreating...");
+            recreate_swapchain();
+            continue;
+        }
+        if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+            die("[rvk] Failed to acquire next image: %", describe(result));
+        }
+        break;
     }
 
-    // Out of date if a resize is required
-    if(result == VK_ERROR_OUT_OF_DATE_KHR) {
-        info("[rvk] Swapchain out of date, recreating...");
-        recreate_swapchain();
-    } else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        die("[rvk] Failed to acquire next image: %", describe(result));
+    if(state.has_imgui) {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui::NewFrame();
     }
 
     // Previously, we waited for the complete fence of the frame currently
@@ -403,15 +417,13 @@ void Vk::begin_frame() {
 
 void Vk::end_frame(Image_View& output) {
 
+    state.resized_last_frame = false;
+
     if(state.has_imgui) {
         ImGui::Render();
     }
 
-    // While minimized, check if we are no longer minimized
-    if(state.minimized) {
-        recreate_swapchain();
-        return;
-    }
+    if(state.minimized) return;
 
     Frame& frame = frames[state.frame_index];
 
@@ -464,11 +476,17 @@ void Vk::end_frame(Image_View& output) {
     state.advance();
 }
 
+VkExtent2D Vk::surface_extent() {
+    last_drawable_extent = drawable_extent();
+    return Swapchain::choose_extent(physical_device->capabilities(instance->surface()),
+                                    last_drawable_extent);
+}
+
 void Vk::recreate_swapchain() {
 
-    VkExtent2D ext = Swapchain::choose_extent(physical_device->capabilities(instance->surface()));
+    VkExtent2D ext = surface_extent();
 
-    state.minimized = ext.width == 0 && ext.height == 0;
+    state.minimized = ext.width == 0 || ext.height == 0;
     if(state.minimized) return;
 
     info("[rvk] Recreating swapchain...");
@@ -482,8 +500,8 @@ void Vk::recreate_swapchain() {
 
         sync([&](Commands& cmds) {
             swapchain = Arc<Swapchain, Alloc>::make(cmds, physical_device, device.dup(),
-                                                    instance->surface(), state.frames_in_flight,
-                                                    state.is_hdr);
+                                                    instance->surface(), ext,
+                                                    state.frames_in_flight, state.is_hdr);
         });
         compositor = Arc<Compositor, Alloc>::make(device.dup(), swapchain.dup(), descriptor_pool);
 
