@@ -4591,7 +4591,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 apply_new_text = "";
                 apply_new_text_length = 0;
                 value_changed = true;
-                IMSTB_TEXTEDIT_CHARTYPE empty_string;
+                IMSTB_TEXTEDIT_CHARTYPE empty_string = 0;
                 stb_textedit_replace(state, &state->Stb, &empty_string, 0);
             }
             else if (strcmp(buf, state->InitialTextA.Data) != 0)
@@ -7761,7 +7761,7 @@ namespace ImGui
 
 ImGuiTabBar::ImGuiTabBar()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     CurrFrameVisible = PrevFrameVisible = -1;
     LastTabItemIdx = -1;
 }
