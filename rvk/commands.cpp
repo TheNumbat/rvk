@@ -246,6 +246,10 @@ Command_Pool_Manager<F>::Command_Pool_Manager(Arc<Device, Alloc> device)
 template<Queue_Family F>
 Command_Pool_Manager<F>::~Command_Pool_Manager() {
 
+    if(this_thread.pools.ok() && &*this_thread.pools == &*pools) {
+        this_thread.pools.clear();
+    }
+
     Thread::Lock lock(pools->mutex);
     pools->closed = true;
     pools->active_threads = {};
